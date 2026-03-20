@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from word_parser import extract_slides
 from tts_client import synthesize_to_mp3
 from pptx_builder import embed_audio_into_pptx
+from translator import translate_for_voice
 from pptx import Presentation
 
 app = FastAPI(title="PowerPoint Narration Generator")
@@ -115,7 +116,8 @@ async def process(
 
         print(f"[Process] Synthesizing slide {word_idx + 1} → PPTX slide {pptx_idx + 1} ({len(text)} chars)", flush=True)
         try:
-            audio = synthesize_to_mp3(text, voice=voice)
+            translated = translate_for_voice(text, voice=voice)
+            audio = synthesize_to_mp3(translated, voice=voice)
             slide_audio[pptx_idx] = audio if audio else None
         except Exception as exc:
             raise HTTPException(
