@@ -41,6 +41,11 @@
         <div class="step-circle">3</div>
         <span class="step-label">Generate &amp; Download</span>
       </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-4">
+        <div class="step-circle">4</div>
+        <span class="step-label">Quality Check</span>
+      </div>
     </nav>
 
     <!-- ── Step panels ── -->
@@ -173,10 +178,13 @@
           <div class="done-icon">✅</div>
           <h3>Your narrated presentation is ready!</h3>
           <p>Audio has been embedded into each slide. Open in PowerPoint and start the slideshow — audio plays automatically on each slide.</p>
-          <a class="btn btn-primary btn-download" id="download-link" download="narrated_presentation.pptx">
-            ⬇ Download PPTX
-          </a>
-          <button class="btn btn-secondary" id="btn-restart">Start Over</button>
+          <div class="action-row" style="justify-content:center;margin-top:0">
+            <a class="btn btn-primary btn-download" id="download-link" download="narrated_presentation.pptx">
+              ⬇ Download PPTX
+            </a>
+            <button class="btn btn-secondary" id="btn-quality-check">🔍 Quality Check →</button>
+            <button class="btn btn-secondary" id="btn-restart">Start Over</button>
+          </div>
         </div>
 
         <div class="error-wrap hidden" id="gen-error-wrap">
@@ -184,6 +192,93 @@
           <h3>Something went wrong</h3>
           <p id="gen-error-msg"></p>
           <button class="btn btn-secondary" id="btn-back-2">← Go Back</button>
+        </div>
+      </section>
+
+      <!-- ─ Step 4: Quality Check ─ -->
+      <section class="panel" id="panel-4" aria-labelledby="step-indicator-4">
+        <h2>Quality Check</h2>
+        <p class="desc">Upload your original Word script and the generated narrated PPTX. The agent will transcribe each audio clip and score it against your script using GPT-5.2.</p>
+
+        <div class="upload-grid">
+          <label class="upload-card" id="card-qc-docx" tabindex="0" role="button">
+            <input type="file" id="input-qc-docx" accept=".docx" hidden />
+            <div class="upload-icon">📄</div>
+            <div class="upload-label">Original Word Script</div>
+            <div class="upload-hint">.docx — the same script used to generate</div>
+            <div class="upload-filename" id="qc-docx-name">No file chosen</div>
+          </label>
+          <label class="upload-card" id="card-qc-pptx" tabindex="0" role="button">
+            <input type="file" id="input-qc-pptx" accept=".pptx" hidden />
+            <div class="upload-icon">📊</div>
+            <div class="upload-label">Narrated PPTX</div>
+            <div class="upload-hint">.pptx — the output file you downloaded</div>
+            <div class="upload-filename" id="qc-pptx-name">No file chosen</div>
+          </label>
+        </div>
+
+        <div class="voice-row">
+          <label for="qc-voice-select">Voice used:</label>
+          <select id="qc-voice-select">
+            <optgroup label="English">
+              <option value="en-US-JennyNeural">English US — Jenny (Female)</option>
+              <option value="en-US-GuyNeural">English US — Guy (Male)</option>
+              <option value="en-US-AriaNeural">English US — Aria (Female)</option>
+              <option value="en-US-DavisNeural">English US — Davis (Male)</option>
+              <option value="en-GB-SoniaNeural">English UK — Sonia (Female)</option>
+              <option value="en-GB-RyanNeural">English UK — Ryan (Male)</option>
+            </optgroup>
+            <optgroup label="European">
+              <option value="fr-FR-DeniseNeural">French — Denise 🇫🇷</option>
+              <option value="fr-FR-HenriNeural">French — Henri 🇫🇷</option>
+              <option value="es-ES-ElviraNeural">Spanish (Spain) — Elvira 🇪🇸</option>
+              <option value="es-MX-DaliaNeural">Spanish (Mexico) — Dalia 🇲🇽</option>
+              <option value="de-DE-KatjaNeural">German — Katja 🇩🇪</option>
+              <option value="de-DE-ConradNeural">German — Conrad 🇩🇪</option>
+              <option value="it-IT-ElsaNeural">Italian — Elsa 🇮🇹</option>
+              <option value="pt-BR-FranciscaNeural">Portuguese (Brazil) — Francisca 🇧🇷</option>
+              <option value="nl-NL-ColetteNeural">Dutch — Colette 🇳🇱</option>
+              <option value="pl-PL-AgnieszkaNeural">Polish — Agnieszka 🇵🇱</option>
+              <option value="ru-RU-SvetlanaNeural">Russian — Svetlana 🇷🇺</option>
+            </optgroup>
+            <optgroup label="Asian">
+              <option value="ja-JP-NanamiNeural">Japanese — Nanami 🇯🇵</option>
+              <option value="zh-CN-XiaoxiaoNeural">Chinese Mandarin — Xiaoxiao 🇨🇳</option>
+              <option value="ko-KR-SunHiNeural">Korean — Sun-Hi 🇰🇷</option>
+              <option value="hi-IN-SwaraNeural">Hindi — Swara 🇮🇳</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-secondary" id="btn-back-4">← Back</button>
+          <button class="btn btn-primary" id="btn-run-qc" disabled>Run Quality Check →</button>
+        </div>
+        <div class="error-msg hidden" id="qc-error"></div>
+
+        <!-- Results -->
+        <div class="qc-running hidden" id="qc-running">
+          <div class="qc-spinner"></div>
+          <p id="qc-running-label">Analysing slides…</p>
+        </div>
+
+        <div class="hidden" id="qc-results">
+          <div class="qc-summary-bar" id="qc-summary-bar"></div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table class="mapping-table qc-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Slide title</th>
+                  <th>Confidence</th>
+                  <th>Transcription</th>
+                  <th>Issues</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody id="qc-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 

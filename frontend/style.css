@@ -213,3 +213,36 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
   background: #fdf0f0; border: 1px solid #f0b8b8;
   border-radius: 4px; padding: 8px 12px;
 }
+
+/* ── Quality Check ───────────────────────────────────────── */
+.qc-running {
+  display: flex; align-items: center; gap: 12px;
+  margin: 28px 0; color: var(--grey-50);
+}
+.qc-spinner {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border: 3px solid var(--grey-20); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.qc-summary-bar {
+  background: var(--grey-05); border-radius: var(--radius);
+  padding: 14px 18px; font-size: .95rem;
+  display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+}
+
+.badge-confidence {
+  display: inline-block; padding: 2px 10px; border-radius: 9999px;
+  font-size: .82rem; font-weight: 700; white-space: nowrap;
+}
+.badge-confidence.high { background: #d4f7e0; color: #1a6e3c; }
+.badge-confidence.mid  { background: #fef3c7; color: #92400e; }
+.badge-confidence.low  { background: #fde8e8; color: #9b1c1c; }
+.badge-confidence.none { background: var(--grey-10); color: var(--grey-50); }
+
+.qc-table td { vertical-align: top; font-size: .87rem; }
+.qc-table .td-transcription { max-width: 240px; white-space: normal; line-height: 1.4; }
+.qc-table .td-issues { max-width: 200px; }
+.qc-table .td-issues ul { margin: 0; padding-left: 18px; }
+.qc-table .td-issues li { margin-bottom: 3px; }

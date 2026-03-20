@@ -20,6 +20,7 @@ from word_parser import extract_slides
 from tts_client import synthesize_to_mp3
 from pptx_builder import embed_audio_into_pptx
 from translator import translate_for_voice
+from quality_checker import run_quality_check
 from pptx import Presentation
 
 app = FastAPI(title="PowerPoint Narration Generator")
@@ -135,3 +136,31 @@ async def process(
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         headers={"Content-Disposition": "attachment; filename=narrated_presentation.pptx"},
     )
+
+
+@app.post("/api/quality-check")
+async def quality_check(
+    script: UploadFile = File(...),
+    pptx: UploadFile = File(...),
+    voice: str = Form("en-US-JennyNeural"),
+):
+    """
+    Quality Check agent:
+      1. Parse original Word script for slide texts.
+      2. Extract MP3s from the narrated PPTX and transcribe each via Azure STT.
+      3. Compare each transcription against the script section using GPT-5.2.
+      4. Return per-slide confidence scores and issues.
+    """
+    docx_bytes = await script.read()
+    pptx_bytes = await pptx.read()
+
+    slides = extract_slides(docx_bytes)
+    print(f"[QA] Starting quality check: {len(slides)} script slides, voice={voice}", flush=True)
+
+    try:
+        results = run_quality_check(pptx_bytes, slides, voice=voice)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Quality check failed: {exc}")
+
+    return JSONResponse({"results": results})
+

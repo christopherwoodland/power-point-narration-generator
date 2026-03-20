@@ -30,11 +30,32 @@ const downloadLink  = document.getElementById("download-link");
 const btnRestart    = document.getElementById("btn-restart");
 const genErrorWrap  = document.getElementById("gen-error-wrap");
 const genErrorMsg   = document.getElementById("gen-error-msg");
-const btnBack2      = document.getElementById("btn-back-2");
+const btnBack2       = document.getElementById("btn-back-2");
+const btnQualityCheck = document.getElementById("btn-quality-check");
+
+/* QC panel */
+const inputQcDocx    = document.getElementById("input-qc-docx");
+const inputQcPptx    = document.getElementById("input-qc-pptx");
+const cardQcDocx     = document.getElementById("card-qc-docx");
+const cardQcPptx     = document.getElementById("card-qc-pptx");
+const qcDocxName     = document.getElementById("qc-docx-name");
+const qcPptxName     = document.getElementById("qc-pptx-name");
+const btnRunQc       = document.getElementById("btn-run-qc");
+const btnBack4       = document.getElementById("btn-back-4");
+const qcError        = document.getElementById("qc-error");
+const qcRunning      = document.getElementById("qc-running");
+const qcRunningLabel = document.getElementById("qc-running-label");
+const qcResults      = document.getElementById("qc-results");
+const qcTbody        = document.getElementById("qc-tbody");
+const qcSummaryBar   = document.getElementById("qc-summary-bar");
+const qcVoiceSelect  = document.getElementById("qc-voice-select");
+
+let qcDocxFile = null;
+let qcPptxFile = null;
 
 /* ── Step helpers ───────────────────────────────────────── */
 function goTo(step) {
-  [1, 2, 3].forEach(n => {
+  [1, 2, 3, 4].forEach(n => {
     document.getElementById(`panel-${n}`).classList.toggle("active", n === step);
     const ind = document.getElementById(`step-indicator-${n}`);
     ind.classList.remove("active", "done");
@@ -244,3 +265,112 @@ btnRestart.addEventListener("click", () => {
 });
 
 btnBack2.addEventListener("click", () => goTo(2));
+
+/* ── Quality Check nav ──────────────────────────────────── */
+btnQualityCheck.addEventListener("click", () => {
+  // Pre-fill QC pickers with the same files already uploaded in step 1
+  if (docxFile && !qcDocxFile) {
+    qcDocxFile = docxFile;
+    qcDocxName.textContent = docxFile.name;
+    cardQcDocx.classList.add("has-file");
+  }
+  // Pre-fill the narrated PPTX from the download blob if available
+  const href = downloadLink.href;
+  if (href && href.startsWith("blob:") && !qcPptxFile) {
+    fetch(href).then(r => r.blob()).then(blob => {
+      qcPptxFile = new File([blob], "narrated_presentation.pptx",
+        { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+      qcPptxName.textContent = qcPptxFile.name;
+      cardQcPptx.classList.add("has-file");
+      checkQcReady();
+    });
+  }
+  // Mirror voice selection
+  qcVoiceSelect.value = voiceSelect.value;
+  checkQcReady();
+  goTo(4);
+});
+
+function checkQcReady() {
+  btnRunQc.disabled = !(qcDocxFile && qcPptxFile);
+}
+
+setupFilePicker(cardQcDocx, inputQcDocx, qcDocxName, f => { qcDocxFile = f; checkQcReady(); });
+setupFilePicker(cardQcPptx, inputQcPptx, qcPptxName, f => { qcPptxFile = f; checkQcReady(); });
+
+btnBack4.addEventListener("click", () => goTo(3));
+
+/* ── Run Quality Check ──────────────────────────────────── */
+btnRunQc.addEventListener("click", async () => {
+  qcError.classList.add("hidden");
+  qcResults.classList.add("hidden");
+  qcRunning.classList.remove("hidden");
+  qcRunningLabel.textContent = "Transcribing audio and scoring slides…";
+  btnRunQc.disabled = true;
+
+  const fd = new FormData();
+  fd.append("script", qcDocxFile);
+  fd.append("pptx",   qcPptxFile);
+  fd.append("voice",  qcVoiceSelect.value);
+
+  try {
+    const res = await fetch("/api/quality-check", { method: "POST", body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+    const data = await res.json();
+    renderQcResults(data.results);
+  } catch (e) {
+    qcError.textContent = `Error: ${e.message}`;
+    qcError.classList.remove("hidden");
+  } finally {
+    qcRunning.classList.add("hidden");
+    btnRunQc.disabled = false;
+  }
+});
+
+function renderQcResults(results) {
+  const scored = results.filter(r => r.confidence !== null && r.confidence !== undefined);
+  const avg = scored.length
+    ? Math.round(scored.reduce((s, r) => s + r.confidence, 0) / scored.length)
+    : null;
+
+  const green  = scored.filter(r => r.confidence >= 80).length;
+  const yellow = scored.filter(r => r.confidence >= 50 && r.confidence < 80).length;
+  const red    = scored.filter(r => r.confidence < 50).length;
+
+  qcSummaryBar.innerHTML =
+    (avg !== null ? `<span>Average confidence: <b>${avg}%</b></span>` : "") +
+    `<span><span class="badge-confidence high">✅ ≥80 - ${green}</span></span>` +
+    `<span><span class="badge-confidence mid">⚠️ 50–79 - ${yellow}</span></span>` +
+    `<span><span class="badge-confidence low">❌ &lt;50 - ${red}</span></span>`;
+
+  qcTbody.innerHTML = results.map(r => {
+    let badge;
+    if (r.confidence === null || r.confidence === undefined) {
+      badge = `<span class="badge-confidence none">No audio</span>`;
+    } else if (r.confidence >= 80) {
+      badge = `<span class="badge-confidence high">${r.confidence}%</span>`;
+    } else if (r.confidence >= 50) {
+      badge = `<span class="badge-confidence mid">${r.confidence}%</span>`;
+    } else {
+      badge = `<span class="badge-confidence low">${r.confidence}%</span>`;
+    }
+
+    const issuesList = r.issues && r.issues.length
+      ? `<ul>${r.issues.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`
+      : `<span style="color:var(--grey-40)">None</span>`;
+
+    return `<tr>
+      <td class="td-num">${r.slide}</td>
+      <td class="td-title">${escapeHtml(r.title || "")}</td>
+      <td style="text-align:center">${badge}</td>
+      <td class="td-transcription">${escapeHtml(r.transcription || "—")}</td>
+      <td class="td-issues">${issuesList}</td>
+      <td>${escapeHtml(r.summary || "—")}</td>
+    </tr>`;
+  }).join("");
+
+  qcResults.classList.remove("hidden");
+}
