@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PowerPoint Narration Generator</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- ── Header ── -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="6" fill="#0078d4"/>
+            <path d="M8 10h10v2H8zm0 4h10v2H8zm0 4h6v2H8z" fill="#fff"/>
+            <circle cx="22" cy="22" r="6" fill="#fff"/>
+            <path d="M20 22l1.5 1.5L24 20" stroke="#0078d4" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>PowerPoint Narration Generator</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Stepper ── -->
+    <nav class="stepper" aria-label="Wizard steps">
+      <div class="step active" id="step-indicator-1">
+        <div class="step-circle">1</div>
+        <span class="step-label">Upload Files</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-2">
+        <div class="step-circle">2</div>
+        <span class="step-label">Review Slides</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-3">
+        <div class="step-circle">3</div>
+        <span class="step-label">Generate &amp; Download</span>
+      </div>
+    </nav>
+
+    <!-- ── Step panels ── -->
+    <main class="wizard-panels">
+
+      <!-- ─ Step 1: Upload ─ -->
+      <section class="panel active" id="panel-1" aria-labelledby="step-indicator-1">
+        <h2>Upload your files</h2>
+        <p class="desc">Provide the Word script and the PowerPoint presentation. The script should use <strong>Heading&nbsp;1</strong> paragraphs (or paragraphs that begin with "Slide N") as slide separators.</p>
+
+        <div class="upload-grid">
+          <label class="upload-card" id="card-docx" tabindex="0"
+                 role="button" aria-describedby="docx-hint">
+            <input type="file" id="input-docx" accept=".docx" hidden />
+            <div class="upload-icon">📄</div>
+            <div class="upload-label">Word Script</div>
+            <div class="upload-hint" id="docx-hint">.docx — your narration script</div>
+            <div class="upload-filename" id="docx-name">No file chosen</div>
+          </label>
+
+          <label class="upload-card" id="card-pptx" tabindex="0"
+                 role="button" aria-describedby="pptx-hint">
+            <input type="file" id="input-pptx" accept=".pptx" hidden />
+            <div class="upload-icon">📊</div>
+            <div class="upload-label">PowerPoint Presentation</div>
+            <div class="upload-hint" id="pptx-hint">.pptx — the presentation to narrate</div>
+            <div class="upload-filename" id="pptx-name">No file chosen</div>
+          </label>
+        </div>
+
+        <div class="voice-row">
+          <label for="voice-select">TTS Voice:</label>
+          <select id="voice-select">
+            <option value="en-US-JennyNeural">Jenny (en-US, Female)</option>
+            <option value="en-US-GuyNeural">Guy (en-US, Male)</option>
+            <option value="en-US-AriaNeural">Aria (en-US, Female)</option>
+            <option value="en-US-DavisNeural">Davis (en-US, Male)</option>
+            <option value="en-US-NancyNeural">Nancy (en-US, Female)</option>
+          </select>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary" id="btn-parse" disabled>
+            Next: Preview Slides →
+          </button>
+        </div>
+        <div class="error-msg hidden" id="parse-error"></div>
+      </section>
+
+      <!-- ─ Step 2: Review / Map ─ -->
+      <section class="panel" id="panel-2" aria-labelledby="step-indicator-2">
+        <h2>Review slide mapping</h2>
+
+        <div class="counts-bar" id="counts-bar"></div>
+
+        <div class="mismatch-banner hidden" id="mismatch-banner">
+          <span class="warn-icon">⚠️</span>
+          <span id="mismatch-msg"></span>
+          The extra script slides at the bottom have been left unmapped. Adjust the dropdowns below as needed.
+        </div>
+
+        <div class="table-wrap">
+          <table class="mapping-table" id="mapping-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script slide title</th>
+                <th>Script text preview</th>
+                <th>Maps to PPTX slide</th>
+              </tr>
+            </thead>
+            <tbody id="mapping-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-secondary" id="btn-back-1">← Back</button>
+          <button class="btn btn-primary" id="btn-generate">
+            Generate Narrated PPTX →
+          </button>
+        </div>
+      </section>
+
+      <!-- ─ Step 3: Generate ─ -->
+      <section class="panel" id="panel-3" aria-labelledby="step-indicator-3">
+        <h2>Generating narrated presentation…</h2>
+
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+          </div>
+          <p class="progress-label" id="progress-label">Sending to Azure TTS…</p>
+        </div>
+
+        <div class="done-wrap hidden" id="done-wrap">
+          <div class="done-icon">✅</div>
+          <h3>Your narrated presentation is ready!</h3>
+          <p>Audio has been embedded into each slide. Open in PowerPoint and start the slideshow — audio plays automatically on each slide.</p>
+          <a class="btn btn-primary btn-download" id="download-link" download="narrated_presentation.pptx">
+            ⬇ Download PPTX
+          </a>
+          <button class="btn btn-secondary" id="btn-restart">Start Over</button>
+        </div>
+
+        <div class="error-wrap hidden" id="gen-error-wrap">
+          <div class="done-icon">❌</div>
+          <h3>Something went wrong</h3>
+          <p id="gen-error-msg"></p>
+          <button class="btn btn-secondary" id="btn-back-2">← Go Back</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
