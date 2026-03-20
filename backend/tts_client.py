@@ -101,7 +101,7 @@ def synthesize_to_mp3(text: str, voice: str = "en-US-JennyNeural") -> bytes:
     headers = {
         "Authorization": f"Bearer {speech_token}",
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+        "X-Microsoft-OutputFormat": "audio-16khz-64kbitrate-mono-mp3",
         "User-Agent": "powerpoint-add-tool",
     }
 

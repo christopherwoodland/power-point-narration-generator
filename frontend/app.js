@@ -366,6 +366,7 @@ function renderQcResults(results) {
       <td class="td-num">${r.slide}</td>
       <td class="td-title">${escapeHtml(r.title || "")}</td>
       <td style="text-align:center">${badge}</td>
+      <td class="td-original">${escapeHtml(r.original_text || "—")}</td>
       <td class="td-transcription">${escapeHtml(r.transcription || "—")}</td>
       <td class="td-issues">${issuesList}</td>
       <td>${escapeHtml(r.summary || "—")}</td>

@@ -242,7 +242,8 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 .badge-confidence.none { background: var(--grey-10); color: var(--grey-50); }
 
 .qc-table td { vertical-align: top; font-size: .87rem; }
-.qc-table .td-transcription { max-width: 240px; white-space: normal; line-height: 1.4; }
+.qc-table .td-original      { max-width: 220px; white-space: normal; line-height: 1.4; color: var(--grey-60); font-size: 0.85em; }
+.qc-table .td-transcription { max-width: 220px; white-space: normal; line-height: 1.4; }
 .qc-table .td-issues { max-width: 200px; }
 .qc-table .td-issues ul { margin: 0; padding-left: 18px; }
 .qc-table .td-issues li { margin-bottom: 3px; }
