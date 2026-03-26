@@ -23,4 +23,17 @@ Write-Host ""
 $env:AZURE_SPEECH_RESOURCE_NAME = "bhs-development-public-foundry-r"
 $env:AZURE_SPEECH_REGION        = "eastus2"
 
+# Load .env file if present — each non-comment, non-empty line sets an env var
+$envFile = Join-Path $root ".env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | Where-Object { $_ -match "^\s*[^#\s]" } | ForEach-Object {
+        $parts = $_ -split "=", 2
+        if ($parts.Count -eq 2) {
+            $key   = $parts[0].Trim()
+            $value = $parts[1].Trim()
+            [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+        }
+    }
+}
+
 & $uvicorn main:app --host 127.0.0.1 --port 8000 --app-dir $backend --reload

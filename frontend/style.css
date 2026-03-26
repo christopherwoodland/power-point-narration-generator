@@ -86,6 +86,97 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 .panel h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 8px; }
 .panel .desc { color: var(--grey-50); margin-bottom: 24px; line-height: 1.5; }
 
+/* ── Environment banner ──────────────────────────────────── */
+.env-banner {
+  background: #fff4ce;
+  border-bottom: 2px solid #f0c418;
+  color: #4a3800;
+  font-size: .88rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 16px;
+  letter-spacing: .01em;
+  position: sticky;
+  z-index: 100;
+}
+.env-banner:last-of-type {
+  border-bottom: none;
+  border-top: 2px solid #f0c418;
+  position: static;
+}
+
+/* ── Upload notice ───────────────────────────────────────── */
+.upload-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff9e6;
+  border: 1px solid #f0c418;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: .88rem;
+  color: #4a3800;
+  margin-bottom: 16px;
+}
+.upload-notice-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── AI Mode toggle ──────────────────────────────────────── */
+.ai-mode-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e8f4ff 100%);
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius);
+  user-select: none;
+  transition: background .2s;
+}
+.ai-mode-toggle:hover { background: linear-gradient(135deg, #deecf9 0%, #d0e8fa 100%); }
+
+/* Hide the native checkbox visually */
+.ai-mode-toggle input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.ai-mode-toggle-track {
+  position: relative;
+  width: 44px;
+  min-width: 44px;
+  height: 24px;
+  background: var(--grey-30);
+  border-radius: 9999px;
+  transition: background .2s;
+  margin-top: 2px;
+}
+.ai-mode-toggle input:checked ~ .ai-mode-toggle-track { background: var(--blue); }
+
+.ai-mode-toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.ai-mode-toggle input:checked ~ .ai-mode-toggle-track .ai-mode-toggle-thumb {
+  transform: translateX(20px);
+}
+
+.ai-mode-toggle-text { display: flex; flex-direction: column; gap: 3px; }
+.ai-mode-toggle-text strong { font-size: .95rem; color: var(--blue-dark); }
+.ai-mode-desc { font-size: .82rem; color: var(--grey-50); line-height: 1.4; }
+
+/* Disabled PPTX card in AI mode */
+.upload-card.ai-mode-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  border-style: dashed;
+  border-color: var(--grey-30);
+  background: var(--grey-05);
+}
+
 /* ── Upload cards ───────────────────────────────────────── */
 .upload-grid {
   display: grid;
@@ -198,18 +289,178 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 
 /* ── Done / Error ───────────────────────────────────────── */
 .done-wrap, .error-wrap {
-  max-width: 540px; margin: 48px auto; text-align: center;
-  background: #fff; border-radius: var(--radius); padding: 36px 28px;
+  max-width: 560px; margin: 48px auto; text-align: center;
+  background: #fff; border-radius: var(--radius); padding: 40px 36px;
   box-shadow: var(--shadow);
 }
-.done-icon { font-size: 3rem; margin-bottom: 12px; }
-.done-wrap h3, .error-wrap h3 { font-size: 1.3rem; margin-bottom: 10px; }
-.done-wrap p, .error-wrap p { color: var(--grey-50); margin-bottom: 20px; line-height: 1.5; }
+.done-icon { font-size: 3.5rem; margin-bottom: 14px; }
+.done-wrap h3, .error-wrap h3 { font-size: 1.45rem; margin-bottom: 10px; font-weight: 700; }
+.done-wrap p, .error-wrap p { color: var(--grey-50); margin-bottom: 24px; line-height: 1.6; }
 .done-wrap .action-row { justify-content: center; }
+
+/* Two main download buttons side-by-side */
+.done-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.btn-done-main {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-radius: 8px;
+  text-align: left; text-decoration: none;
+  font-size: .9rem; font-family: var(--font);
+  font-weight: 600; cursor: pointer;
+  border: none; transition: background .15s, box-shadow .15s;
+}
+.btn-done-main .btn-icon { font-size: 1.5rem; flex-shrink: 0; }
+.btn-done-main .btn-label-main { display: block; font-size: .95rem; font-weight: 700; }
+.btn-done-main .btn-label-sub  { display: block; font-size: .78rem; opacity: .7; font-weight: 400; margin-top: 1px; }
+.btn-done-secondary {
+  background: var(--grey-05); color: var(--grey-90);
+  border: 1.5px solid var(--grey-30) !important;
+}
+.btn-done-secondary:hover { background: var(--grey-10); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.btn-primary.btn-done-main:hover:not(:disabled) { background: var(--blue-dark); box-shadow: 0 2px 8px rgba(0,90,200,.25); }
+
+/* Row for utility actions (Quality Check / Start Over) */
+.done-util-row {
+  display: flex; justify-content: center; gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--grey-10);
+}
 
 /* ── Error msg ──────────────────────────────────────────── */
 .error-msg {
   margin-top: 12px; color: var(--red); font-size: .9rem;
   background: #fdf0f0; border: 1px solid #f0b8b8;
   border-radius: 4px; padding: 8px 12px;
+}
+
+/* ── Quality Check ───────────────────────────────────────── */
+.qc-running {
+  display: flex; align-items: center; gap: 12px;
+  margin: 28px 0; color: var(--grey-50);
+}
+.qc-spinner {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border: 3px solid var(--grey-20); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.qc-summary-bar {
+  background: var(--grey-05); border-radius: var(--radius);
+  padding: 14px 18px; font-size: .95rem;
+  display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+}
+
+.badge-confidence {
+  display: inline-block; padding: 2px 10px; border-radius: 9999px;
+  font-size: .82rem; font-weight: 700; white-space: nowrap;
+}
+.badge-confidence.high { background: #d4f7e0; color: #1a6e3c; }
+.badge-confidence.mid  { background: #fef3c7; color: #92400e; }
+.badge-confidence.low  { background: #fde8e8; color: #9b1c1c; }
+.badge-confidence.none { background: var(--grey-10); color: var(--grey-50); }
+
+.qc-table td { vertical-align: top; font-size: .87rem; }
+.qc-table .td-original      { max-width: 220px; white-space: normal; line-height: 1.4; color: var(--grey-60); font-size: 0.85em; }
+.qc-table .td-transcription { max-width: 220px; white-space: normal; line-height: 1.4; }
+.qc-table .td-issues { max-width: 200px; }
+.qc-table .td-issues ul { margin: 0; padding-left: 18px; }
+.qc-table .td-issues li { margin-bottom: 3px; }
+.issues-critical { color: var(--red); }
+.issues-critical li::marker { color: var(--red); }
+.issues-minor { color: var(--warn); }
+.issues-minor li::marker { color: var(--warn); }
+.issues-none { color: var(--grey-30); font-style: italic; font-size: .82rem; }
+
+/* ── Responsive — Tablet (≤768px) ───────────────────────── */
+@media (max-width: 768px) {
+  /* Stepper: shrink step min-width and font */
+  .stepper { padding: 20px 8px 0; gap: 0; }
+  .step { min-width: 72px; }
+  .step-label { font-size: .72rem; }
+  .step-line { min-width: 16px; max-width: 48px; }
+
+  /* Panel padding */
+  .wizard-panels { padding: 0 12px 32px; margin: 16px auto; }
+  .panel h2 { font-size: 1.2rem; }
+
+  /* Upload grid already 1-col at 600px; give cards less padding */
+  .upload-card { padding: 24px 16px; }
+
+  /* Voice row wraps */
+  .voice-row { flex-wrap: wrap; }
+  .voice-row select { flex: 1 1 100%; }
+
+  /* Mapping table: loosen fixed column widths */
+  .mapping-table th, .mapping-table td { padding: 8px 8px; }
+  .mapping-table .td-title { width: auto; min-width: 100px; }
+  .td-preview { max-width: 200px; }
+  .td-map select { min-width: 80px; }
+
+  /* Done / error wrap */
+  .done-wrap, .error-wrap { margin: 28px auto; padding: 24px 16px; }
+  .done-action-row { grid-template-columns: 1fr; }
+
+  /* Progress: tighten top margin */
+  .progress-wrap { margin: 36px auto; }
+
+  /* QC table columns: relax constraints */
+  .qc-table .td-original      { max-width: 160px; }
+  .qc-table .td-transcription { max-width: 160px; }
+  .qc-table .td-issues        { max-width: 150px; }
+}
+
+/* ── Responsive — Phone (≤480px) ────────────────────────── */
+@media (max-width: 480px) {
+  /* Header: reduce logo text size so it doesn't clip */
+  .logo { font-size: .9rem; gap: 8px; }
+  .logo svg { width: 26px; height: 26px; flex-shrink: 0; }
+
+  /* Stepper: show only circles, hide labels */
+  .step-label { display: none; }
+  .step { min-width: 36px; }
+  .step-line { min-width: 8px; max-width: 32px; }
+  .step-circle { width: 32px; height: 32px; font-size: .85rem; }
+
+  /* Panel */
+  .wizard-panels { padding: 0 10px 24px; margin: 12px auto; }
+  .panel h2 { font-size: 1.1rem; }
+  .panel .desc { font-size: .88rem; }
+
+  /* Upload cards: reduce padding, smaller icon */
+  .upload-card { padding: 20px 14px; gap: 6px; }
+  .upload-icon { font-size: 1.8rem; }
+  .upload-label { font-size: .92rem; }
+
+  /* AI toggle: stack text on very small widths */
+  .ai-mode-toggle { gap: 10px; padding: 12px 12px; }
+  .ai-mode-toggle-text strong { font-size: .88rem; }
+
+  /* Buttons: full-width on phones */
+  .action-row { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; padding: 12px 16px; }
+
+  /* Voice row: stack label + select */
+  .voice-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .voice-row select { width: 100%; }
+
+  /* Counts bar: smaller text */
+  .counts-bar { gap: 12px; font-size: .82rem; padding: 10px 12px; }
+
+  /* Mapping table: hide preview column on phones */
+  .mapping-table .td-preview-col,
+  .mapping-table .td-preview { display: none; }
+
+  /* Progress */
+  .progress-wrap { margin: 24px auto; }
+
+  /* Done / error: full-width */
+  .done-wrap, .error-wrap { margin: 16px 0; border-radius: var(--radius); }
+
+  /* QC summary bar: stack */
+  .qc-summary-bar { flex-direction: column; gap: 8px; padding: 12px 12px; }
 }
