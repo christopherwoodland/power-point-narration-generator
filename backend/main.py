@@ -9,6 +9,7 @@ import io
 import json
 import tempfile
 import os
+import zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
@@ -17,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from word_parser import extract_slides
+from pptx_script_parser import extract_slides_from_pptx
 from tts_client import synthesize_to_mp3
 from pptx_builder import embed_audio_into_pptx
 from translator import translate_for_voice
@@ -24,6 +26,23 @@ from quality_checker import run_quality_check
 from pptx import Presentation
 
 app = FastAPI(title="PowerPoint Narration Generator")
+
+
+def _parse_script(filename: str, file_bytes: bytes) -> list[dict]:
+    """Auto-detect script format (docx or pptx) and extract slides."""
+    try:
+        if filename.lower().endswith(".pptx"):
+            return extract_slides_from_pptx(file_bytes)
+        return extract_slides(file_bytes)
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=422,
+            detail=f"The uploaded file '{filename}' could not be read as a valid "
+                   f"{'PPTX' if filename.lower().endswith('.pptx') else 'DOCX'} file. "
+                   f"Please check the file is not corrupted and matches its extension."
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse script: {exc}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,10 +71,10 @@ async def parse_doc(script: UploadFile = File(...), pptx: UploadFile = File(...)
     Step 1 of the wizard: parse the Word doc and return slide list alongside
     the actual slide count from the PPTX so the UI can show any mismatches.
     """
-    docx_bytes = await script.read()
+    script_bytes = await script.read()
     pptx_bytes = await pptx.read()
 
-    slides = extract_slides(docx_bytes)
+    slides = _parse_script(script.filename or "", script_bytes)
 
     prs = Presentation(io.BytesIO(pptx_bytes))
     pptx_slide_count = len(prs.slides)
@@ -81,11 +100,11 @@ async def process(
       3. Embed audio into PPTX slides per the mapping.
       4. Return the modified PPTX as a download.
     """
-    docx_bytes = await script.read()
+    script_bytes = await script.read()
     pptx_bytes = await pptx.read()
 
-    # Parse word doc
-    slides = extract_slides(docx_bytes)
+    # Parse script (Word or PowerPoint)
+    slides = _parse_script(script.filename or "", script_bytes)
 
     prs = Presentation(io.BytesIO(pptx_bytes))
     pptx_slide_count = len(prs.slides)
@@ -151,10 +170,10 @@ async def quality_check(
       3. Compare each transcription against the script section using GPT-5.2.
       4. Return per-slide confidence scores and issues.
     """
-    docx_bytes = await script.read()
+    script_bytes = await script.read()
     pptx_bytes = await pptx.read()
 
-    slides = extract_slides(docx_bytes)
+    slides = _parse_script(script.filename or "", script_bytes)
     print(f"[QA] Starting quality check: {len(slides)} script slides, voice={voice}", flush=True)
 
     try:

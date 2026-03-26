@@ -54,15 +54,15 @@
       <!-- ─ Step 1: Upload ─ -->
       <section class="panel active" id="panel-1" aria-labelledby="step-indicator-1">
         <h2>Upload your files</h2>
-        <p class="desc">Provide the Word script and the PowerPoint presentation. The script should use <strong>Heading&nbsp;1</strong> paragraphs (or paragraphs that begin with "Slide N") as slide separators.</p>
+        <p class="desc">Provide the narration script and the PowerPoint presentation to narrate. The script can be a <strong>Word document</strong> (.docx) or a <strong>PowerPoint file</strong> (.pptx). For Word documents, use <strong>Heading&nbsp;1</strong> paragraphs (or "Slide N" paragraphs) as slide separators. For PowerPoint, slide text is read directly from each slide.</p>
 
         <div class="upload-grid">
           <label class="upload-card" id="card-docx" tabindex="0"
                  role="button" aria-describedby="docx-hint">
-            <input type="file" id="input-docx" accept=".docx" hidden />
+            <input type="file" id="input-docx" accept=".docx,.pptx" hidden />
             <div class="upload-icon">📄</div>
-            <div class="upload-label">Word Script</div>
-            <div class="upload-hint" id="docx-hint">.docx — your narration script</div>
+            <div class="upload-label">Narration Script</div>
+            <div class="upload-hint" id="docx-hint">.docx or .pptx — your narration script</div>
             <div class="upload-filename" id="docx-name">No file chosen</div>
           </label>
 
@@ -198,14 +198,14 @@
       <!-- ─ Step 4: Quality Check ─ -->
       <section class="panel" id="panel-4" aria-labelledby="step-indicator-4">
         <h2>Quality Check</h2>
-        <p class="desc">Upload your original Word script and the generated narrated PPTX. The agent will transcribe each audio clip and score it against your script using GPT-5.2.</p>
+        <p class="desc">Upload your original script and the generated narrated PPTX. The agent will transcribe each audio clip and score it against your script using GPT-5.2.</p>
 
         <div class="upload-grid">
           <label class="upload-card" id="card-qc-docx" tabindex="0" role="button">
-            <input type="file" id="input-qc-docx" accept=".docx" hidden />
+            <input type="file" id="input-qc-docx" accept=".docx,.pptx" hidden />
             <div class="upload-icon">📄</div>
-            <div class="upload-label">Original Word Script</div>
-            <div class="upload-hint">.docx — the same script used to generate</div>
+            <div class="upload-label">Original Script</div>
+            <div class="upload-hint">.docx or .pptx — the same script used to generate</div>
             <div class="upload-filename" id="qc-docx-name">No file chosen</div>
           </label>
           <label class="upload-card" id="card-qc-pptx" tabindex="0" role="button">

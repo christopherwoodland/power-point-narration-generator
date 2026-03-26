@@ -100,7 +100,10 @@ btnParse.addEventListener("click", async () => {
     const res = await fetch("/api/parse", { method: "POST", body: fd });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || res.statusText);
+      const detail = Array.isArray(err.detail)
+        ? err.detail.map(e => `${e.loc?.join(".")} — ${e.msg}`).join("; ")
+        : err.detail || res.statusText;
+      throw new Error(detail);
     }
     const data = await res.json();
     parsedSlides   = data.slides;
