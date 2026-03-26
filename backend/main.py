@@ -28,6 +28,10 @@ from pptx import Presentation
 app = FastAPI(title="PowerPoint Narration Generator")
 
 
+_OLD_DOC_MAGIC = b"\xd0\xcf\x11\xe0"   # OLE2 / legacy .doc signature
+_ECMA_MAGIC    = b"PK\x03\x04"          # ZIP / modern Office Open XML signature
+
+
 def _parse_script(filename: str, file_bytes: bytes) -> list[dict]:
     """Auto-detect script format (docx or pptx) and extract slides."""
     try:
@@ -35,12 +39,27 @@ def _parse_script(filename: str, file_bytes: bytes) -> list[dict]:
             return extract_slides_from_pptx(file_bytes)
         return extract_slides(file_bytes)
     except zipfile.BadZipFile:
-        raise HTTPException(
-            status_code=422,
-            detail=f"The uploaded file '{filename}' could not be read as a valid "
-                   f"{'PPTX' if filename.lower().endswith('.pptx') else 'DOCX'} file. "
-                   f"Please check the file is not corrupted and matches its extension."
-        )
+        # Give a more specific hint based on the file's magic bytes
+        if file_bytes[:4] == _OLD_DOC_MAGIC:
+            detail = (
+                f"'{filename}' appears to be a legacy Word 97-2003 (.doc) file saved "
+                f"with a .docx extension. Please open it in Word, choose "
+                f"File → Save As → Word Document (.docx), and re-upload."
+            )
+        elif file_bytes[:4] != _ECMA_MAGIC:
+            detail = (
+                f"'{filename}' could not be opened — it may be password-protected or "
+                f"corrupted. If the document has a password, remove it in Word "
+                f"(File → Info → Protect Document → Encrypt with Password → clear the "
+                f"password) and re-upload."
+            )
+        else:
+            detail = (
+                f"'{filename}' could not be read as a valid "
+                f"{'PPTX' if filename.lower().endswith('.pptx') else 'DOCX'} file. "
+                f"Please check the file is not corrupted and matches its extension."
+            )
+        raise HTTPException(status_code=422, detail=detail)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to parse script: {exc}")
 
