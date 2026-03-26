@@ -86,6 +86,97 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 .panel h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 8px; }
 .panel .desc { color: var(--grey-50); margin-bottom: 24px; line-height: 1.5; }
 
+/* ── Environment banner ──────────────────────────────────── */
+.env-banner {
+  background: #fff4ce;
+  border-bottom: 2px solid #f0c418;
+  color: #4a3800;
+  font-size: .88rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 16px;
+  letter-spacing: .01em;
+  position: sticky;
+  z-index: 100;
+}
+.env-banner:last-of-type {
+  border-bottom: none;
+  border-top: 2px solid #f0c418;
+  position: static;
+}
+
+/* ── Upload notice ───────────────────────────────────────── */
+.upload-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff9e6;
+  border: 1px solid #f0c418;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: .88rem;
+  color: #4a3800;
+  margin-bottom: 16px;
+}
+.upload-notice-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── AI Mode toggle ──────────────────────────────────────── */
+.ai-mode-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e8f4ff 100%);
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius);
+  user-select: none;
+  transition: background .2s;
+}
+.ai-mode-toggle:hover { background: linear-gradient(135deg, #deecf9 0%, #d0e8fa 100%); }
+
+/* Hide the native checkbox visually */
+.ai-mode-toggle input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.ai-mode-toggle-track {
+  position: relative;
+  width: 44px;
+  min-width: 44px;
+  height: 24px;
+  background: var(--grey-30);
+  border-radius: 9999px;
+  transition: background .2s;
+  margin-top: 2px;
+}
+.ai-mode-toggle input:checked ~ .ai-mode-toggle-track { background: var(--blue); }
+
+.ai-mode-toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.ai-mode-toggle input:checked ~ .ai-mode-toggle-track .ai-mode-toggle-thumb {
+  transform: translateX(20px);
+}
+
+.ai-mode-toggle-text { display: flex; flex-direction: column; gap: 3px; }
+.ai-mode-toggle-text strong { font-size: .95rem; color: var(--blue-dark); }
+.ai-mode-desc { font-size: .82rem; color: var(--grey-50); line-height: 1.4; }
+
+/* Disabled PPTX card in AI mode */
+.upload-card.ai-mode-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  border-style: dashed;
+  border-color: var(--grey-30);
+  background: var(--grey-05);
+}
+
 /* ── Upload cards ───────────────────────────────────────── */
 .upload-grid {
   display: grid;

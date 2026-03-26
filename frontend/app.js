@@ -3,8 +3,11 @@ let docxFile = null;
 let pptxFile = null;
 let parsedSlides = [];
 let pptxSlideCount = 0;
+let aiMode = false;
 
 /* ── Element refs ───────────────────────────────────────── */
+const chkAiMode    = document.getElementById("chk-ai-mode");
+const cardPptxWrap = document.getElementById("card-pptx");
 const inputDocx    = document.getElementById("input-docx");
 const inputPptx    = document.getElementById("input-pptx");
 const cardDocx     = document.getElementById("card-docx");
@@ -82,8 +85,23 @@ function setupFilePicker(card, input, nameEl, onPick) {
 setupFilePicker(cardDocx, inputDocx, docxName, f => { docxFile = f; });
 setupFilePicker(cardPptx, inputPptx, pptxName, f => { pptxFile = f; });
 
+/* ── AI mode toggle ─────────────────────────────────────── */
+chkAiMode.addEventListener("change", () => {
+  aiMode = chkAiMode.checked;
+  if (aiMode) {
+    cardPptxWrap.classList.add("ai-mode-disabled");
+    cardPptxWrap.querySelector(".upload-label").textContent = "PowerPoint (optional)";
+    cardPptxWrap.querySelector(".upload-hint").textContent = "AI will generate the slides — or upload your own template";
+  } else {
+    cardPptxWrap.classList.remove("ai-mode-disabled");
+    cardPptxWrap.querySelector(".upload-label").textContent = "PowerPoint Presentation";
+    cardPptxWrap.querySelector(".upload-hint").textContent = ".pptx \u2014 the presentation to narrate";
+  }
+  checkReady();
+});
+
 function checkReady() {
-  btnParse.disabled = !(docxFile && pptxFile);
+  btnParse.disabled = aiMode ? !docxFile : !(docxFile && pptxFile);
 }
 
 /* ── Step 1 → Step 2: Parse ─────────────────────────────── */
@@ -94,7 +112,8 @@ btnParse.addEventListener("click", async () => {
 
   const fd = new FormData();
   fd.append("script", docxFile);
-  fd.append("pptx",   pptxFile);
+  if (!aiMode && pptxFile) fd.append("pptx", pptxFile);
+  fd.append("ai_mode", aiMode ? "true" : "false");
 
   try {
     const res = await fetch("/api/parse", { method: "POST", body: fd });
@@ -122,6 +141,27 @@ btnParse.addEventListener("click", async () => {
 /* ── Build mapping table ─────────────────────────────────── */
 function buildMappingTable() {
   const wordCount = parsedSlides.length;
+
+  // In AI mode: show a preview-only table, no PPTX mapping dropdowns
+  if (aiMode) {
+    document.querySelector("#panel-2 h2").textContent = "Review slides for AI generation";
+    countsBar.innerHTML = `<span>📄 Script slides: <b>${wordCount}</b></span><span>✦ AI will build ${wordCount} slide(s) with images</span>`;
+    mismatch.classList.add("hidden");
+    mappingTbody.innerHTML = parsedSlides.map((slide, idx) => {
+      const preview = escapeHtml(slide.text.substring(0, 220)) + (slide.text.length > 220 ? "…" : "");
+      return `<tr>
+        <td class="td-num">${idx + 1}</td>
+        <td class="td-title">${escapeHtml(slide.title)}</td>
+        <td colspan="2"><div class="td-preview">${preview}</div></td>
+      </tr>`;
+    }).join("");
+    // Rename button for AI mode
+    btnGenerate.textContent = "✦ Generate AI Presentation →";
+    return;
+  }
+
+  document.querySelector("#panel-2 h2").textContent = "Review slide mapping";
+  btnGenerate.textContent = "Generate Narrated PPTX →";
 
   countsBar.innerHTML =
     `<span>📄 Script slides: <b>${wordCount}</b></span>` +
@@ -178,7 +218,88 @@ btnBack1.addEventListener("click", () => goTo(1));
 
 /* ── Step 2 → Step 3: Generate ──────────────────────────── */
 btnGenerate.addEventListener("click", async () => {
-  // Collect mapping from dropdowns
+  if (aiMode) {
+    // AI generation mode — stream NDJSON progress events from /api/generate-ai
+    goTo(3);
+    progressWrap.classList.remove("hidden");
+    doneWrap.classList.add("hidden");
+    genErrorWrap.classList.add("hidden");
+    progressFill.style.width = "0%";
+    progressLabel.textContent = "Starting AI generation…";
+
+    const fd = new FormData();
+    fd.append("script", docxFile);
+    fd.append("voice",  voiceSelect.value);
+
+    try {
+      const res = await fetch("/api/generate-ai", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buf     = "";
+
+      // Phase weights for progress bar (structure + build = 40%, image = 30%, tts = 30%)
+      const phaseEnd = { structure: 0.15, image: 0.45, build: 0.50, tts: 0.95 };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        // Process all complete lines in the buffer
+        let nl;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+
+          let event;
+          try { event = JSON.parse(line); } catch { continue; }
+
+          if (event.type === "progress") {
+            const { slide, total, phase } = event;
+            progressLabel.textContent = event.message || `Processing slide ${slide} of ${total}…`;
+            // Per-slide progress: each slide gets an equal share of 0–95%
+            const weight = phaseEnd[phase] ?? 0.5;
+            const pct    = ((slide - 1 + weight) / total) * 95;
+            progressFill.style.width = pct.toFixed(1) + "%";
+
+          } else if (event.type === "done") {
+            // Decode base64 PPTX → Blob
+            const b64    = event.pptx;
+            const binary = atob(b64);
+            const bytes  = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const blob = new Blob([bytes], {
+              type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            });
+            downloadLink.href     = URL.createObjectURL(blob);
+            downloadLink.download = "ai_generated_presentation.pptx";
+            progressFill.style.width = "100%";
+            progressLabel.textContent = "Done!";
+            setTimeout(() => {
+              progressWrap.classList.add("hidden");
+              doneWrap.classList.remove("hidden");
+            }, 600);
+
+          } else if (event.type === "error") {
+            throw new Error(event.message);
+          }
+        }
+      }
+    } catch (e) {
+      progressWrap.classList.add("hidden");
+      genErrorMsg.textContent = e.message;
+      genErrorWrap.classList.remove("hidden");
+    }
+    return;
+  }
+
+  // Standard mode — collect mapping from dropdowns
   const mapping = {};
   document.querySelectorAll("#mapping-tbody select").forEach(sel => {
     const wordIdx = sel.dataset.wordIdx;
@@ -195,7 +316,7 @@ btnGenerate.addEventListener("click", async () => {
   progressWrap.classList.remove("hidden");
   doneWrap.classList.add("hidden");
   genErrorWrap.classList.add("hidden");
-  animateProgress();
+  animateProgress(false);
 
   const fd = new FormData();
   fd.append("script",        docxFile);
@@ -226,9 +347,16 @@ btnGenerate.addEventListener("click", async () => {
 });
 
 /* ── Fake progress animation while backend works ─────────── */
-function animateProgress() {
+function animateProgress(isAiMode = false) {
   let pct = 0;
-  const msgs = [
+  const msgs = isAiMode ? [
+    "Analysing slide content with GPT…",
+    "Generating slide images with AI…",
+    "Building PowerPoint structure…",
+    "Synthesising narration audio…",
+    "Embedding audio into slides…",
+    "Finalising AI presentation…",
+  ] : [
     "Sending to Azure TTS…",
     "Synthesizing slide narrations…",
     "Embedding audio into slides…",
@@ -258,6 +386,11 @@ function animateProgress() {
 btnRestart.addEventListener("click", () => {
   docxFile = null; pptxFile = null;
   parsedSlides = []; pptxSlideCount = 0;
+  aiMode = false;
+  chkAiMode.checked = false;
+  cardPptxWrap.classList.remove("ai-mode-disabled");
+  cardPptxWrap.querySelector(".upload-label").textContent = "PowerPoint Presentation";
+  cardPptxWrap.querySelector(".upload-hint").textContent = ".pptx \u2014 the presentation to narrate";
   inputDocx.value = ""; inputPptx.value = "";
   docxName.textContent = "No file chosen";
   pptxName.textContent = "No file chosen";

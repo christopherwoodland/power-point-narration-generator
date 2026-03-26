@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  {{ENV_BANNER}}
   <div class="app">
     <!-- ── Header ── -->
     <header class="app-header">
@@ -55,6 +56,23 @@
       <section class="panel active" id="panel-1" aria-labelledby="step-indicator-1">
         <h2>Upload your files</h2>
         <p class="desc">Provide the narration script and the PowerPoint presentation to narrate. The script can be a <strong>Word document</strong> (.docx) or a <strong>PowerPoint file</strong> (.pptx). For Word documents, use <strong>Heading&nbsp;1</strong> paragraphs (or "Slide N" paragraphs) as slide separators. For PowerPoint, slide text is read directly from each slide.</p>
+
+        <div class="upload-notice" role="note">
+          <span class="upload-notice-icon">⚠️</span>
+          <span>Please ensure your Word document is <strong>not password-protected or encrypted</strong> before uploading. Secured documents cannot be read and will cause an error.</span>
+        </div>
+
+        <!-- AI mode toggle -->
+        <label class="ai-mode-toggle" id="ai-mode-label">
+          <input type="checkbox" id="chk-ai-mode" />
+          <span class="ai-mode-toggle-track">
+            <span class="ai-mode-toggle-thumb"></span>
+          </span>
+          <span class="ai-mode-toggle-text">
+            <strong>✦ Generate presentation with AI</strong>
+            <span class="ai-mode-desc">AI builds slides and images from your script — no PowerPoint upload needed.</span>
+          </span>
+        </label>
 
         <div class="upload-grid">
           <label class="upload-card" id="card-docx" tabindex="0"
@@ -285,6 +303,7 @@
 
     </main>
   </div>
+  {{ENV_BANNER}}
 
   <script src="/static/app.js"></script>
 </body>

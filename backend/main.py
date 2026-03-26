@@ -5,9 +5,13 @@ POST /api/parse   — parse Word doc, return slide list (no TTS yet)
 POST /api/process — full pipeline: parse Word → TTS → embed audio → return PPTX
 GET  /            — serve the wizard UI
 """
+import asyncio
+import base64
 import io
 import json
+import queue as _queue
 import tempfile
+import threading
 import os
 import zipfile
 from pathlib import Path
@@ -23,6 +27,7 @@ from tts_client import synthesize_to_mp3
 from pptx_builder import embed_audio_into_pptx
 from translator import translate_for_voice
 from quality_checker import run_quality_check
+from ai_pptx_generator import build_ai_presentation
 from pptx import Presentation
 
 app = FastAPI(title="PowerPoint Narration Generator")
@@ -76,25 +81,46 @@ if _frontend.exists():
     app.mount("/static", StaticFiles(directory=str(_frontend)), name="static")
 
 
+_ENV_BANNER_MSG = os.environ.get("APP_BANNER_MESSAGE", "").strip()
+_ENV_BANNER_HTML = (
+    f'<div class="env-banner" role="status">{_ENV_BANNER_MSG}</div>'
+    if _ENV_BANNER_MSG else ""
+)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     index_file = _frontend / "index.html"
     if index_file.exists():
-        return HTMLResponse(index_file.read_text(encoding="utf-8"))
+        html = index_file.read_text(encoding="utf-8")
+        html = html.replace("{{ENV_BANNER}}", _ENV_BANNER_HTML)
+        return HTMLResponse(html)
     return HTMLResponse("<h1>Frontend not found</h1>", status_code=404)
 
 
 @app.post("/api/parse")
-async def parse_doc(script: UploadFile = File(...), pptx: UploadFile = File(...)):
+async def parse_doc(
+    script: UploadFile = File(...),
+    pptx: UploadFile = File(None),
+    ai_mode: str = Form("false"),
+):
     """
-    Step 1 of the wizard: parse the Word doc and return slide list alongside
-    the actual slide count from the PPTX so the UI can show any mismatches.
+    Step 1 of the wizard: parse the script and return slide list.
+    When ai_mode=true, pptx is optional — slide count comes from the script alone.
     """
     script_bytes = await script.read()
-    pptx_bytes = await pptx.read()
 
     slides = _parse_script(script.filename or "", script_bytes)
 
+    if ai_mode.lower() == "true" or pptx is None or pptx.filename == "":
+        return JSONResponse({
+            "slides": slides,
+            "pptx_slide_count": len(slides),
+            "word_slide_count": len(slides),
+            "ai_mode": True,
+        })
+
+    pptx_bytes = await pptx.read()
     prs = Presentation(io.BytesIO(pptx_bytes))
     pptx_slide_count = len(prs.slides)
 
@@ -102,6 +128,7 @@ async def parse_doc(script: UploadFile = File(...), pptx: UploadFile = File(...)
         "slides": slides,
         "pptx_slide_count": pptx_slide_count,
         "word_slide_count": len(slides),
+        "ai_mode": False,
     })
 
 
@@ -174,6 +201,90 @@ async def process(
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         headers={"Content-Disposition": "attachment; filename=narrated_presentation.pptx"},
     )
+
+
+@app.post("/api/generate-ai")
+async def generate_ai(
+    script: UploadFile = File(...),
+    voice: str = Form("en-US-JennyNeural"),
+):
+    """
+    AI generation pipeline — streams newline-delimited JSON progress events:
+      {"type":"progress","slide":N,"total":M,"phase":"structure|image|build|tts","message":"..."}
+    Ends with:
+      {"type":"done","pptx":"<base64 encoded PPTX>"}
+    or on failure:
+      {"type":"error","message":"..."}
+    """
+    script_bytes = await script.read()
+    slides = _parse_script(script.filename or "", script_bytes)
+    total = len(slides)
+
+    print(f"[AI-Gen] Starting AI generation: {total} slides, voice={voice}", flush=True)
+
+    progress_q: _queue.Queue = _queue.Queue()
+
+    def _run():
+        try:
+            _phase_labels = {
+                "structure": "Structuring slide {n} of {t} with GPT…",
+                "image":     "Generating image for slide {n} of {t}…",
+                "build":     "Building slide {n} of {t}…",
+                "tts":       "Synthesising audio for slide {n} of {t}…",
+            }
+
+            def on_progress(slide_num: int, tot: int, phase: str):
+                msg = _phase_labels.get(phase, f"Processing slide {slide_num} of {tot}…")
+                msg = msg.format(n=slide_num, t=tot)
+                progress_q.put({
+                    "type": "progress",
+                    "slide": slide_num,
+                    "total": tot,
+                    "phase": phase,
+                    "message": msg,
+                })
+
+            # Steps 1–3: GPT structure + images + PPTX build
+            pptx_bytes = build_ai_presentation(slides, on_progress=on_progress)
+
+            # Step 4: TTS synthesis
+            slide_audio: list[bytes | None] = []
+            for idx, slide in enumerate(slides):
+                text = slide.get("text", "").strip()
+                if not text:
+                    slide_audio.append(None)
+                    continue
+                on_progress(idx + 1, total, "tts")
+                try:
+                    translated = translate_for_voice(text, voice=voice)
+                    audio = synthesize_to_mp3(translated, voice=voice)
+                    slide_audio.append(audio if audio else None)
+                except Exception as exc:
+                    print(f"[AI-Gen] TTS failed for slide {idx + 1}: {exc}", flush=True)
+                    slide_audio.append(None)
+
+            # Step 5: embed audio + encode result
+            result_bytes = embed_audio_into_pptx(pptx_bytes, slide_audio)
+            print(f"[AI-Gen] Done — {len(result_bytes):,} bytes", flush=True)
+            progress_q.put({"type": "done", "pptx": base64.b64encode(result_bytes).decode()})
+
+        except Exception as exc:
+            progress_q.put({"type": "error", "message": str(exc)})
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    async def _event_stream():
+        while True:
+            try:
+                event = progress_q.get_nowait()
+                yield json.dumps(event) + "\n"
+                if event["type"] in ("done", "error"):
+                    break
+            except _queue.Empty:
+                await asyncio.sleep(0.1)
+
+    return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
 
 
 @app.post("/api/quality-check")
