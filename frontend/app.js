@@ -152,7 +152,7 @@ function buildMappingTable() {
       return `<tr>
         <td class="td-num">${idx + 1}</td>
         <td class="td-title">${escapeHtml(slide.title)}</td>
-        <td colspan="2"><div class="td-preview">${preview}</div></td>
+        <td class="td-preview-col" colspan="2"><div class="td-preview">${preview}</div></td>
       </tr>`;
     }).join("");
     // Rename button for AI mode
@@ -200,7 +200,7 @@ function buildMappingTable() {
     return `<tr>
       <td class="td-num">${idx + 1}</td>
       <td class="td-title">${escapeHtml(slide.title)}</td>
-      <td><div class="td-preview">${preview}</div></td>
+      <td class="td-preview-col"><div class="td-preview">${preview}</div></td>
       <td class="td-map">
         <select data-word-idx="${idx}">${selectedOpts}</select>
       </td>
@@ -494,9 +494,12 @@ function renderQcResults(results) {
       badge = `<span class="badge-confidence low">${r.confidence}%</span>`;
     }
 
-    const issuesList = r.issues && r.issues.length
-      ? `<ul>${r.issues.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`
-      : `<span style="color:var(--grey-40)">None</span>`;
+    const critList = r.critical_issues && r.critical_issues.length
+      ? `<ul class="issues-critical">${r.critical_issues.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`
+      : `<span class="issues-none">None</span>`;
+    const minorList = r.minor_issues && r.minor_issues.length
+      ? `<ul class="issues-minor">${r.minor_issues.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`
+      : `<span class="issues-none">None</span>`;
 
     return `<tr>
       <td class="td-num">${r.slide}</td>
@@ -504,7 +507,8 @@ function renderQcResults(results) {
       <td style="text-align:center">${badge}</td>
       <td class="td-original">${escapeHtml(r.original_text || "—")}</td>
       <td class="td-transcription">${escapeHtml(r.transcription || "—")}</td>
-      <td class="td-issues">${issuesList}</td>
+      <td class="td-issues">${critList}</td>
+      <td class="td-issues">${minorList}</td>
       <td>${escapeHtml(r.summary || "—")}</td>
     </tr>`;
   }).join("");

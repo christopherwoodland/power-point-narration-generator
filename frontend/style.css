@@ -338,3 +338,96 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 .qc-table .td-issues { max-width: 200px; }
 .qc-table .td-issues ul { margin: 0; padding-left: 18px; }
 .qc-table .td-issues li { margin-bottom: 3px; }
+.issues-critical { color: var(--red); }
+.issues-critical li::marker { color: var(--red); }
+.issues-minor { color: var(--warn); }
+.issues-minor li::marker { color: var(--warn); }
+.issues-none { color: var(--grey-30); font-style: italic; font-size: .82rem; }
+
+/* ── Responsive — Tablet (≤768px) ───────────────────────── */
+@media (max-width: 768px) {
+  /* Stepper: shrink step min-width and font */
+  .stepper { padding: 20px 8px 0; gap: 0; }
+  .step { min-width: 72px; }
+  .step-label { font-size: .72rem; }
+  .step-line { min-width: 16px; max-width: 48px; }
+
+  /* Panel padding */
+  .wizard-panels { padding: 0 12px 32px; margin: 16px auto; }
+  .panel h2 { font-size: 1.2rem; }
+
+  /* Upload grid already 1-col at 600px; give cards less padding */
+  .upload-card { padding: 24px 16px; }
+
+  /* Voice row wraps */
+  .voice-row { flex-wrap: wrap; }
+  .voice-row select { flex: 1 1 100%; }
+
+  /* Mapping table: loosen fixed column widths */
+  .mapping-table th, .mapping-table td { padding: 8px 8px; }
+  .mapping-table .td-title { width: auto; min-width: 100px; }
+  .td-preview { max-width: 200px; }
+  .td-map select { min-width: 80px; }
+
+  /* Done / error wrap */
+  .done-wrap, .error-wrap { margin: 28px auto; padding: 24px 16px; }
+
+  /* Progress: tighten top margin */
+  .progress-wrap { margin: 36px auto; }
+
+  /* QC table columns: relax constraints */
+  .qc-table .td-original      { max-width: 160px; }
+  .qc-table .td-transcription { max-width: 160px; }
+  .qc-table .td-issues        { max-width: 150px; }
+}
+
+/* ── Responsive — Phone (≤480px) ────────────────────────── */
+@media (max-width: 480px) {
+  /* Header: reduce logo text size so it doesn't clip */
+  .logo { font-size: .9rem; gap: 8px; }
+  .logo svg { width: 26px; height: 26px; flex-shrink: 0; }
+
+  /* Stepper: show only circles, hide labels */
+  .step-label { display: none; }
+  .step { min-width: 36px; }
+  .step-line { min-width: 8px; max-width: 32px; }
+  .step-circle { width: 32px; height: 32px; font-size: .85rem; }
+
+  /* Panel */
+  .wizard-panels { padding: 0 10px 24px; margin: 12px auto; }
+  .panel h2 { font-size: 1.1rem; }
+  .panel .desc { font-size: .88rem; }
+
+  /* Upload cards: reduce padding, smaller icon */
+  .upload-card { padding: 20px 14px; gap: 6px; }
+  .upload-icon { font-size: 1.8rem; }
+  .upload-label { font-size: .92rem; }
+
+  /* AI toggle: stack text on very small widths */
+  .ai-mode-toggle { gap: 10px; padding: 12px 12px; }
+  .ai-mode-toggle-text strong { font-size: .88rem; }
+
+  /* Buttons: full-width on phones */
+  .action-row { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; padding: 12px 16px; }
+
+  /* Voice row: stack label + select */
+  .voice-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .voice-row select { width: 100%; }
+
+  /* Counts bar: smaller text */
+  .counts-bar { gap: 12px; font-size: .82rem; padding: 10px 12px; }
+
+  /* Mapping table: hide preview column on phones */
+  .mapping-table .td-preview-col,
+  .mapping-table .td-preview { display: none; }
+
+  /* Progress */
+  .progress-wrap { margin: 24px auto; }
+
+  /* Done / error: full-width */
+  .done-wrap, .error-wrap { margin: 16px 0; border-radius: var(--radius); }
+
+  /* QC summary bar: stack */
+  .qc-summary-bar { flex-direction: column; gap: 8px; padding: 12px 12px; }
+}
