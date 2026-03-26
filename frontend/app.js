@@ -30,7 +30,13 @@ const progressLabel = document.getElementById("progress-label");
 const progressWrap  = document.getElementById("progress-wrap");
 const doneWrap      = document.getElementById("done-wrap");
 const downloadLink  = document.getElementById("download-link");
-const btnRestart    = document.getElementById("btn-restart");
+const btnRestart      = document.getElementById("btn-restart");
+const btnExportVideo       = document.getElementById("btn-export-video");
+const doneActionRow        = document.getElementById("done-action-row");
+const doneUtilRow          = document.getElementById("done-util-row");
+const videoProgressWrap    = document.getElementById("video-progress-wrap");
+const videoProgressFill    = document.getElementById("video-progress-fill");
+const videoProgressLabel   = document.getElementById("video-progress-label");
 const genErrorWrap  = document.getElementById("gen-error-wrap");
 const genErrorMsg   = document.getElementById("gen-error-msg");
 const btnBack2       = document.getElementById("btn-back-2");
@@ -401,6 +407,94 @@ btnRestart.addEventListener("click", () => {
 });
 
 btnBack2.addEventListener("click", () => goTo(2));
+
+/* ── Export as Video ───────────────────────────────────── */
+btnExportVideo.addEventListener("click", async () => {
+  const href = downloadLink.href;
+  if (!href || !href.startsWith("blob:")) {
+    alert("Please generate and download the PPTX first.");
+    return;
+  }
+
+  // Show progress bar, hide action buttons
+  doneActionRow.classList.add("hidden");
+  doneUtilRow.classList.add("hidden");
+  videoProgressWrap.classList.remove("hidden");
+  videoProgressFill.style.width = "0%";
+  videoProgressLabel.textContent = "Preparing video export…";
+
+  try {
+    const pptxBlob = await fetch(href).then(r => r.blob());
+    const pptxFile = new File([pptxBlob], "narrated_presentation.pptx", {
+      type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    });
+
+    const fd = new FormData();
+    fd.append("pptx", pptxFile);
+
+    const res = await fetch("/api/export-video", { method: "POST", body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop(); // keep incomplete last line
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line);
+
+        if (event.type === "progress") {
+          videoProgressLabel.textContent = event.message;
+          // export phase = 5%, encode = 5-95% spread over slides, concat = 95-100%
+          let pct = 0;
+          if (event.phase === "export") {
+            pct = 5;
+          } else if (event.phase === "encode") {
+            pct = 5 + ((event.slide - 1) / Math.max(event.total, 1)) * 88;
+          } else if (event.phase === "concat") {
+            pct = 95;
+          }
+          videoProgressFill.style.width = pct.toFixed(1) + "%";
+
+        } else if (event.type === "done") {
+          videoProgressFill.style.width = "100%";
+          videoProgressLabel.textContent = "Done! Downloading…";
+
+          const b64    = event.mp4;
+          const binary = atob(b64);
+          const bytes  = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const videoBlob = new Blob([bytes], { type: "video/mp4" });
+          const videoUrl  = URL.createObjectURL(videoBlob);
+          const a = document.createElement("a");
+          a.href = videoUrl; a.download = "narrated_presentation.mp4";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(videoUrl), 60000);
+
+        } else if (event.type === "error") {
+          throw new Error(event.message);
+        }
+      }
+    }
+  } catch (e) {
+    alert("Video export failed: " + e.message);
+  } finally {
+    videoProgressWrap.classList.add("hidden");
+    videoProgressFill.style.width = "0%";
+    doneActionRow.classList.remove("hidden");
+    doneUtilRow.classList.remove("hidden");
+  }
+});
 
 /* ── Quality Check nav ──────────────────────────────────── */
 btnQualityCheck.addEventListener("click", () => {

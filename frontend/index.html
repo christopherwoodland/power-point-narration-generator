@@ -196,12 +196,28 @@
           <div class="done-icon">✅</div>
           <h3>Your narrated presentation is ready!</h3>
           <p>Audio has been embedded into each slide. Open in PowerPoint and start the slideshow — audio plays automatically on each slide.</p>
-          <div class="action-row" style="justify-content:center;margin-top:0">
-            <a class="btn btn-primary btn-download" id="download-link" download="narrated_presentation.pptx">
-              ⬇ Download PPTX
+
+          <div class="done-action-row" id="done-action-row">
+            <a class="btn btn-primary btn-done-main" id="download-link" download="narrated_presentation.pptx">
+              <span class="btn-icon">⬇</span>
+              <span><span class="btn-label-main">Download PPTX</span><span class="btn-label-sub">Open in PowerPoint</span></span>
             </a>
-            <button class="btn btn-secondary" id="btn-quality-check">🔍 Quality Check →</button>
-            <button class="btn btn-secondary" id="btn-restart">Start Over</button>
+            <button class="btn btn-done-secondary btn-done-main" id="btn-export-video">
+              <span class="btn-icon">🎬</span>
+              <span><span class="btn-label-main">Download as Video</span><span class="btn-label-sub">MP4 slideshow with audio</span></span>
+            </button>
+          </div>
+
+          <div class="done-util-row" id="done-util-row">
+            <button class="btn btn-secondary" id="btn-quality-check">🔍 Quality Check</button>
+            <button class="btn btn-secondary" id="btn-restart">↩ Start Over</button>
+          </div>
+
+          <div class="hidden" id="video-progress-wrap" style="width:100%;margin-top:1.25rem">
+            <p class="progress-label" id="video-progress-label">Preparing video export…</p>
+            <div class="progress-bar-bg" style="margin-top:.5rem">
+              <div class="progress-bar-fill" id="video-progress-fill"></div>
+            </div>
           </div>
         </div>
 

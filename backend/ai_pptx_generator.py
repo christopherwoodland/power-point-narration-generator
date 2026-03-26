@@ -116,7 +116,6 @@ def _generate_image(prompt: str, slide_num: int) -> bytes | None:
             "prompt": prompt,
             "n": 1,
             "size": "1024x1024",
-            "response_format": "b64_json",
         }
         resp = httpx.post(
             _IMG_URL,

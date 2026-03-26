@@ -289,14 +289,46 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 
 /* ── Done / Error ───────────────────────────────────────── */
 .done-wrap, .error-wrap {
-  max-width: 540px; margin: 48px auto; text-align: center;
-  background: #fff; border-radius: var(--radius); padding: 36px 28px;
+  max-width: 560px; margin: 48px auto; text-align: center;
+  background: #fff; border-radius: var(--radius); padding: 40px 36px;
   box-shadow: var(--shadow);
 }
-.done-icon { font-size: 3rem; margin-bottom: 12px; }
-.done-wrap h3, .error-wrap h3 { font-size: 1.3rem; margin-bottom: 10px; }
-.done-wrap p, .error-wrap p { color: var(--grey-50); margin-bottom: 20px; line-height: 1.5; }
+.done-icon { font-size: 3.5rem; margin-bottom: 14px; }
+.done-wrap h3, .error-wrap h3 { font-size: 1.45rem; margin-bottom: 10px; font-weight: 700; }
+.done-wrap p, .error-wrap p { color: var(--grey-50); margin-bottom: 24px; line-height: 1.6; }
 .done-wrap .action-row { justify-content: center; }
+
+/* Two main download buttons side-by-side */
+.done-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.btn-done-main {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-radius: 8px;
+  text-align: left; text-decoration: none;
+  font-size: .9rem; font-family: var(--font);
+  font-weight: 600; cursor: pointer;
+  border: none; transition: background .15s, box-shadow .15s;
+}
+.btn-done-main .btn-icon { font-size: 1.5rem; flex-shrink: 0; }
+.btn-done-main .btn-label-main { display: block; font-size: .95rem; font-weight: 700; }
+.btn-done-main .btn-label-sub  { display: block; font-size: .78rem; opacity: .7; font-weight: 400; margin-top: 1px; }
+.btn-done-secondary {
+  background: var(--grey-05); color: var(--grey-90);
+  border: 1.5px solid var(--grey-30) !important;
+}
+.btn-done-secondary:hover { background: var(--grey-10); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.btn-primary.btn-done-main:hover:not(:disabled) { background: var(--blue-dark); box-shadow: 0 2px 8px rgba(0,90,200,.25); }
+
+/* Row for utility actions (Quality Check / Start Over) */
+.done-util-row {
+  display: flex; justify-content: center; gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--grey-10);
+}
 
 /* ── Error msg ──────────────────────────────────────────── */
 .error-msg {
@@ -371,6 +403,7 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 
   /* Done / error wrap */
   .done-wrap, .error-wrap { margin: 28px auto; padding: 24px 16px; }
+  .done-action-row { grid-template-columns: 1fr; }
 
   /* Progress: tighten top margin */
   .progress-wrap { margin: 36px auto; }

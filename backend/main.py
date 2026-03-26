@@ -28,6 +28,7 @@ from pptx_builder import embed_audio_into_pptx
 from translator import translate_for_voice
 from quality_checker import run_quality_check
 from ai_pptx_generator import build_ai_presentation
+from video_exporter import export_video
 from pptx import Presentation
 
 app = FastAPI(title="PowerPoint Narration Generator")
@@ -312,4 +313,56 @@ async def quality_check(
         raise HTTPException(status_code=502, detail=f"Quality check failed: {exc}")
 
     return JSONResponse({"results": results})
+
+
+@app.post("/api/export-video")
+async def export_video_route(
+    pptx: UploadFile = File(...),
+):
+    """
+    Convert a narrated PPTX to an MP4 slideshow.
+    Streams newline-delimited JSON progress events, ending with:
+      {"type":"done","mp4":"<base64>"}
+    """
+    pptx_bytes = await pptx.read()
+    progress_q: _queue.Queue = _queue.Queue()
+
+    def _run():
+        try:
+            _phase_labels = {
+                "export": "Exporting slides as images…",
+                "encode": "Encoding slide {n} of {t}…",
+                "concat": "Combining clips into video…",
+            }
+
+            def on_progress(slide_num: int, tot: int, phase: str):
+                msg = _phase_labels.get(phase, f"Processing slide {slide_num} of {tot}…")
+                msg = msg.format(n=slide_num, t=tot)
+                progress_q.put({
+                    "type": "progress",
+                    "slide": slide_num,
+                    "total": tot,
+                    "phase": phase,
+                    "message": msg,
+                })
+
+            mp4_bytes = export_video(pptx_bytes, on_progress=on_progress)
+            progress_q.put({"type": "done", "mp4": base64.b64encode(mp4_bytes).decode()})
+        except Exception as exc:
+            progress_q.put({"type": "error", "message": str(exc)})
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    async def _event_stream():
+        while True:
+            try:
+                event = progress_q.get_nowait()
+                yield json.dumps(event) + "\n"
+                if event["type"] in ("done", "error"):
+                    break
+            except _queue.Empty:
+                await asyncio.sleep(0.1)
+
+    return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
 
