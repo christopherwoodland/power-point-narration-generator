@@ -451,7 +451,8 @@ btnExportVideo.addEventListener("click", async () => {
 
       for (const line of lines) {
         if (!line.trim()) continue;
-        const event = JSON.parse(line);
+        let event;
+        try { event = JSON.parse(line); } catch { continue; }
 
         if (event.type === "progress") {
           videoProgressLabel.textContent = event.message;

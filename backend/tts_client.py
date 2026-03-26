@@ -75,9 +75,12 @@ def _build_ssml(text: str, voice: str = "en-US-JennyNeural") -> str:
             .replace('"', "&quot;")
             .replace("'", "&apos;")
     )
+    # Derive locale from voice name (e.g. "fr-FR-DeniseNeural" → "fr-FR")
+    parts = voice.split("-")
+    lang = f"{parts[0]}-{parts[1]}" if len(parts) >= 2 else "en-US"
     return (
         f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-        f'xml:lang="en-US">'
+        f'xml:lang="{lang}">'
         f'<voice name="{voice}">{safe}</voice>'
         f"</speak>"
     )
@@ -101,7 +104,7 @@ def synthesize_to_mp3(text: str, voice: str = "en-US-JennyNeural") -> bytes:
     headers = {
         "Authorization": f"Bearer {speech_token}",
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-16khz-64kbitrate-mono-mp3",
+        "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3",
         "User-Agent": "powerpoint-add-tool",
     }
 

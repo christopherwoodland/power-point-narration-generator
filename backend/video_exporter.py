@@ -28,7 +28,7 @@ _AUDIO_REL_TYPE = (
 _SLIDE_W_PX = 1920
 _SLIDE_H_PX = 1080
 _FALLBACK_DURATION_S = 3.0  # seconds to show a slide that has no audio
-_AUDIO_DELAY_MS = 400        # ms to show slide before audio begins
+_AUDIO_DELAY_MS = 200        # ms silence before audio begins (small natural pause)
 
 
 def _resolve_rel_target(rel_target: str) -> str:
@@ -114,33 +114,45 @@ def _make_slide_clip(
     duration: float,
     out_path: str,
 ) -> None:
-    """Encode a single PNG + optional audio into an MP4 clip."""
-    cmd = [
-        "ffmpeg", "-y",
-        "-loop", "1",
-        "-framerate", "1",
-        "-i", png_path,
-    ]
+    """Encode a single PNG + optional audio into an MP4 clip.
+
+    All clips share the same codec profile (H.264 yuv420p 25fps / AAC 44100 stereo)
+    so the concat demuxer can stream-copy without re-encoding.
+    Slides without audio get a silent AAC track for consistent stream layout.
+    """
+    vf = (
+        f"scale={_SLIDE_W_PX}:{_SLIDE_H_PX}:force_original_aspect_ratio=decrease,"
+        f"pad={_SLIDE_W_PX}:{_SLIDE_H_PX}:(ow-iw)/2:(oh-ih)/2,fps=25"
+    )
+    common_audio = ["-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2"]
+
     if mp3_path:
-        cmd += [
+        # Delay audio so the slide is visible for a beat before narration starts.
+        # apad + -shortest: clip ends when delayed audio ends.
+        cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-framerate", "25", "-i", png_path,
             "-i", mp3_path,
-            "-af", f"adelay={_AUDIO_DELAY_MS}|{_AUDIO_DELAY_MS}",
+            "-vf", vf,
+            "-af", f"adelay={_AUDIO_DELAY_MS}|{_AUDIO_DELAY_MS},aresample=44100",
             "-shortest",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+            *common_audio,
+            out_path,
         ]
     else:
-        cmd += ["-t", str(duration)]
-
-    cmd += [
-        "-vf", f"scale={_SLIDE_W_PX}:{_SLIDE_H_PX}:force_original_aspect_ratio=decrease,"
-               f"pad={_SLIDE_W_PX}:{_SLIDE_H_PX}:(ow-iw)/2:(oh-ih)/2",
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        out_path,
-    ]
+        # No audio — synthesise a silent stereo track so concat has a consistent
+        # audio stream across all clips (avoids channel-layout mismatch errors).
+        cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-framerate", "25", "-i", png_path,
+            "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+            "-vf", vf,
+            "-t", str(duration),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+            *common_audio,
+            out_path,
+        ]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
