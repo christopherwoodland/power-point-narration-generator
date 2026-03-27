@@ -20,6 +20,17 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 WORKDIR /app
 
+# LibreOffice headless + poppler-utils (pdftoppm) for cross-platform PPTX→PNG
+# ffmpeg for audio/video encoding
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-impress \
+    libreoffice-common \
+    fonts-liberation \
+    fonts-dejavu-core \
+    poppler-utils \
+    ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 

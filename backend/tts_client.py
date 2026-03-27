@@ -21,7 +21,7 @@ Environment variables:
 import os
 import time
 import httpx
-from azure.identity import DefaultAzureCredential
+from azure_credential import get_credential
 
 COGNITIVE_SERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
 
@@ -48,7 +48,7 @@ def _get_speech_token() -> str:
         return _sts_token
 
     # Step 1: get AAD token
-    aad_token = DefaultAzureCredential().get_token(COGNITIVE_SERVICES_SCOPE).token
+    aad_token = get_credential().get_token(COGNITIVE_SERVICES_SCOPE).token
 
     # Step 2: exchange for Speech STS token
     response = httpx.post(

@@ -388,6 +388,30 @@ function animateProgress(isAiMode = false) {
   progressWrap.addEventListener("hidden", () => clearInterval(iv), { once: true });
 }
 
+/* ── How To modal ────────────────────────────────────────── */
+const btnHowTo     = document.getElementById("btn-how-to");
+const howtoOverlay = document.getElementById("howto-overlay");
+
+function openHowTo() {
+  howtoOverlay.classList.add("howto-open");
+  const closeBtn = howtoOverlay.querySelector(".howto-close");
+  if (closeBtn) closeBtn.focus();
+}
+function closeHowTo() {
+  howtoOverlay.classList.remove("howto-open");
+  btnHowTo.focus();
+}
+
+btnHowTo.addEventListener("click", openHowTo);
+document.getElementById("howto-close").addEventListener("click", closeHowTo);
+// Also close on backdrop click
+howtoOverlay.addEventListener("click", e => {
+  if (e.target === howtoOverlay) closeHowTo();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && howtoOverlay.classList.contains("howto-open")) closeHowTo();
+});
+
 /* ── Restart ─────────────────────────────────────────────── */
 btnRestart.addEventListener("click", () => {
   docxFile = null; pptxFile = null;

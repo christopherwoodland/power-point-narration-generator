@@ -18,7 +18,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import httpx
-from azure.identity import DefaultAzureCredential
+from azure_credential import get_credential
 
 from stt_client import transcribe_mp3
 from translator import _locale_from_voice
@@ -213,7 +213,7 @@ def _score_slide(original_text: str, transcription: str) -> dict:
             "summary": "Unable to evaluate: no transcription available",
         }
 
-    aad_token = DefaultAzureCredential().get_token(COGNITIVE_SERVICES_SCOPE).token
+    aad_token = get_credential().get_token(COGNITIVE_SERVICES_SCOPE).token
 
     payload = {
         "messages": [

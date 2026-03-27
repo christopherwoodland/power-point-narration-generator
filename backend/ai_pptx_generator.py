@@ -18,7 +18,7 @@ import os
 import re
 
 import httpx
-from azure.identity import DefaultAzureCredential
+from azure_credential import get_credential
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
@@ -80,7 +80,7 @@ Rules:
 
 
 def _get_aad_token() -> str:
-    return DefaultAzureCredential().get_token(COGNITIVE_SERVICES_SCOPE).token
+    return get_credential().get_token(COGNITIVE_SERVICES_SCOPE).token
 
 
 def _structure_slide(narration_text: str, slide_num: int) -> dict:

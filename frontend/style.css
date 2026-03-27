@@ -35,6 +35,103 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
 }
 .header-inner { display: flex; align-items: center; width: 100%; max-width: 960px; margin: 0 auto; }
 .logo { display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 600; }
+.header-inner { justify-content: space-between; }
+
+/* ── How To button (header) ──────────────────────────────── */
+.btn-how-to {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.15);
+  border: 1.5px solid rgba(255,255,255,.5);
+  color: #fff;
+  font-family: var(--font);
+  font-size: .85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn-how-to:hover { background: rgba(255,255,255,.28); border-color: #fff; }
+.btn-how-to:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ── How To modal overlay ────────────────────────────────── */
+.howto-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px 24px;
+  z-index: 10000;
+  overflow-y: auto;
+}
+.howto-overlay.howto-open { display: flex; }
+
+.howto-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.22);
+  width: 100%;
+  max-width: 740px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+}
+
+.howto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px 16px;
+  border-bottom: 1px solid var(--grey-10);
+  background: #fff;
+}
+.howto-header h2 { font-size: 1.15rem; font-weight: 700; color: var(--grey-90); }
+
+.howto-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--grey-50);
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background .15s, color .15s;
+}
+.howto-close:hover { background: var(--grey-10); color: var(--grey-90); }
+
+.howto-body {
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.howto-section h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+  margin-bottom: 10px;
+}
+.howto-section p,
+.howto-section li { font-size: .92rem; line-height: 1.65; color: var(--grey-90); margin-bottom: 5px; }
+.howto-section ol,
+.howto-section ul { padding-left: 22px; margin-bottom: 4px; }
+.howto-section li { margin-bottom: 5px; }
+.howto-section code {
+  background: var(--grey-10);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: .87em;
+  font-family: monospace;
+}
 
 /* ── Stepper ────────────────────────────────────────────── */
 .stepper {
@@ -103,6 +200,18 @@ body { font-family: var(--font); background: var(--grey-05); color: var(--grey-9
   border-bottom: none;
   border-top: 2px solid #f0c418;
   position: static;
+}
+
+/* ── App version badge ───────────────────────────────────── */
+.app-version {
+  position: fixed;
+  bottom: 10px;
+  right: 14px;
+  font-size: .72rem;
+  color: var(--grey-40, #999);
+  pointer-events: none;
+  z-index: 9999;
+  letter-spacing: .02em;
 }
 
 /* ── Upload notice ───────────────────────────────────────── */

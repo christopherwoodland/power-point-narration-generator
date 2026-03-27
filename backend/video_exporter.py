@@ -72,10 +72,91 @@ def _extract_audio_per_slide(pptx_bytes: bytes) -> dict[int, bytes | None]:
     return result
 
 
+def _export_slides_as_png_libreoffice(pptx_path: str, out_dir: str) -> list[str]:
+    """
+    Export every slide as a PNG using LibreOffice headless + pdftoppm.
+    Works on Linux/macOS — no PowerPoint required.
+
+    Flow:
+      1. libreoffice --headless --convert-to pdf  →  input.pdf
+      2. pdftoppm -png -rx 192 -ry 192            →  slide-NNNN.png  (1920×1080 at a 10:1 ratio)
+    """
+    import platform
+    pptx_abs = str(Path(pptx_path).resolve())
+    pdf_path  = str(Path(out_dir) / "input.pdf")
+
+    # Step 1: PPTX → PDF
+    # Use a writable temp dir for LibreOffice's user profile so it works when
+    # HOME is /nonexistent (typical for non-root container users).
+    lo_profile_dir = str(Path(out_dir) / "lo_profile")
+    Path(lo_profile_dir).mkdir(parents=True, exist_ok=True)
+    lo_profile_url = f"file://{lo_profile_dir}"
+    lo_env = {**os.environ, "HOME": out_dir}
+    lo_bin = "libreoffice"
+    result = subprocess.run(
+        [
+            lo_bin,
+            "--headless",
+            f"-env:UserInstallation={lo_profile_url}",
+            "--convert-to", "pdf",
+            "--outdir", out_dir,
+            pptx_abs,
+        ],
+        capture_output=True,
+        timeout=120,
+        env=lo_env,
+    )
+    if result.returncode != 0 or not Path(pdf_path).exists():
+        raise RuntimeError(
+            f"LibreOffice PDF conversion failed: "
+            f"{result.stderr.decode(errors='replace')[:400]}"
+        )
+
+    # Step 2: PDF → PNG per-page  (192 dpi ≈ 1600px wide for a 16:9 slide — close enough)
+    prefix = str(Path(out_dir) / "slide")
+    result = subprocess.run(
+        ["pdftoppm", "-png", "-rx", "192", "-ry", "192", "-cropbox", pdf_path, prefix],
+        capture_output=True,
+        timeout=300,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"pdftoppm failed: {result.stderr.decode(errors='replace')[:400]}"
+        )
+
+    # pdftoppm names files  slide-1.png, slide-2.png … or slide-01.png etc.
+    png_paths = sorted(
+        Path(out_dir).glob("slide-*.png"),
+        key=lambda p: int("".join(filter(str.isdigit, p.stem)) or "0"),
+    )
+    if not png_paths:
+        raise RuntimeError("pdftoppm produced no PNG files.")
+    return [str(p) for p in png_paths]
+
+
 def _export_slides_as_png(pptx_path: str, out_dir: str, total: int) -> list[str]:
     """
-    Use PowerPoint COM to export every slide as a PNG.
+    Export every slide as a PNG.
+
+    On Windows with PowerPoint installed: uses COM automation for pixel-perfect output.
+    On Linux/macOS (or when win32com is unavailable): uses LibreOffice headless + pdftoppm.
+
     Returns a list of absolute PNG paths ordered by slide number.
+    """
+    import sys
+    if sys.platform == "win32":
+        try:
+            import win32com.client  # type: ignore  # noqa: F401
+            return _export_slides_as_png_win32(pptx_path, out_dir)
+        except ImportError:
+            pass  # fall through to LibreOffice
+
+    return _export_slides_as_png_libreoffice(pptx_path, out_dir)
+
+
+def _export_slides_as_png_win32(pptx_path: str, out_dir: str) -> list[str]:
+    """
+    Use PowerPoint COM to export every slide as a PNG (Windows only).
     """
     import win32com.client  # type: ignore
 
@@ -126,6 +207,11 @@ def _make_slide_clip(
     )
     common_audio = ["-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2"]
 
+    # ultrafast + stillimage tune + single thread: minimises RAM usage on constrained
+    # containers (avoids SIGKILL from OOM with 1920x1080 frames).
+    video_encode = ["-c:v", "libx264", "-preset", "ultrafast", "-tune", "stillimage",
+                    "-crf", "23", "-pix_fmt", "yuv420p", "-threads", "1"]
+
     if mp3_path:
         # Delay audio so the slide is visible for a beat before narration starts.
         # apad + -shortest: clip ends when delayed audio ends.
@@ -136,7 +222,7 @@ def _make_slide_clip(
             "-vf", vf,
             "-af", f"adelay={_AUDIO_DELAY_MS}|{_AUDIO_DELAY_MS},aresample=44100",
             "-shortest",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+            *video_encode,
             *common_audio,
             out_path,
         ]
@@ -149,7 +235,7 @@ def _make_slide_clip(
             "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
             "-vf", vf,
             "-t", str(duration),
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p",
+            *video_encode,
             *common_audio,
             out_path,
         ]

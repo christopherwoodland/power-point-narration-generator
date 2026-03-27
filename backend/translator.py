@@ -13,7 +13,7 @@ English locales (en-*) are passed through unchanged.
 import json
 import os
 import httpx
-from azure.identity import DefaultAzureCredential
+from azure_credential import get_credential
 
 COGNITIVE_SERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
 
@@ -82,7 +82,7 @@ def translate_for_voice(text: str, voice: str) -> str:
 
     print(f"[Translate] {locale}  lang_code={lang_code}  chars={len(text)}", flush=True)
 
-    aad_token = DefaultAzureCredential().get_token(COGNITIVE_SERVICES_SCOPE).token
+    aad_token = get_credential().get_token(COGNITIVE_SERVICES_SCOPE).token
 
     response = httpx.post(
         _TRANSLATOR_URL,

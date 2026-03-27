@@ -23,8 +23,86 @@
           </svg>
           <span>PowerPoint Narration Generator</span>
         </div>
+        <button class="btn-how-to" id="btn-how-to" aria-haspopup="dialog">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6.5 6a1.5 1.5 0 1 1 2.121 1.38C8.2 7.64 8 8.1 8 8.6V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="8" cy="11.5" r=".75" fill="currentColor"/>
+          </svg>
+          How to use
+        </button>
       </div>
     </header>
+
+    <!-- ── How To modal ── -->
+    <div class="howto-overlay" id="howto-overlay" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+      <div class="howto-modal">
+        <div class="howto-header">
+          <h2 id="howto-title">How to use the PowerPoint Narration Generator</h2>
+          <button class="howto-close" id="howto-close" aria-label="Close help">✕</button>
+        </div>
+        <div class="howto-body">
+
+          <section class="howto-section">
+            <h3>📋 Overview</h3>
+            <p>This tool adds spoken narration to your PowerPoint presentation using Azure AI Text-to-Speech. You provide a script and a presentation, and the tool matches each script section to a slide, embeds the audio automatically, and lets you download the result. You can export as a narrated <code>.pptx</code> or as a self-contained <code>.mp4</code> video.</p>
+          </section>
+
+          <section class="howto-section">
+            <h3>🔢 Step 1 — Upload Files</h3>
+            <ol>
+              <li><strong>Narration Script</strong> — upload a <code>.docx</code> Word document or a <code>.pptx</code> file containing your narration text.
+                <ul>
+                  <li>For <strong>Word documents</strong>: use <em>Heading&nbsp;1</em> paragraphs (or paragraphs that start with <em>"Slide N"</em>) as slide separators. The text under each heading becomes the audio for that slide.</li>
+                  <li>For <strong>PowerPoint scripts</strong>: slide text is read directly from each slide in order.</li>
+                  <li>The document must <strong>not be password-protected</strong>.</li>
+                </ul>
+              </li>
+              <li><strong>PowerPoint Presentation</strong> — upload the <code>.pptx</code> file you want narration added to.</li>
+              <li><strong>Language &amp; Voice</strong> — choose from 30+ neural voices across multiple languages.</li>
+              <li>Click <strong>Next: Preview Slides →</strong> when both files are ready.</li>
+            </ol>
+          </section>
+
+          <section class="howto-section">
+            <h3>✦ AI Mode (optional)</h3>
+            <p>Toggle <strong>Generate presentation with AI</strong> on Step 1 to skip uploading a PowerPoint entirely. The AI reads your script and builds a complete slide deck — including slide layouts and generated images — then narrates it. No <code>.pptx</code> upload needed.</p>
+          </section>
+
+          <section class="howto-section">
+            <h3>🔢 Step 2 — Review Slide Mapping</h3>
+            <p>The tool automatically matches each section of your script to a slide. Review the table and use the dropdown in each row to correct any mismatches. Script sections with no matching slide are left as unmapped (shown with a warning banner) — you can reassign them using the dropdowns.</p>
+          </section>
+
+          <section class="howto-section">
+            <h3>🔢 Step 3 — Generate &amp; Download</h3>
+            <p>Click <strong>Generate Narrated PPTX →</strong>. The tool sends each slide's narration to Azure Neural TTS, embeds the resulting audio clip directly into the matching slide, and packages the final file. A progress bar shows real-time status.</p>
+            <p>When complete, two download options appear:</p>
+            <ul>
+              <li><strong>Download PPTX</strong> — the presentation with embedded audio. Open in PowerPoint and run the slideshow — audio plays automatically on each slide transition.</li>
+              <li><strong>Download as Video (MP4)</strong> — a video where each slide is displayed with its narration playing. Ideal for sharing without requiring PowerPoint.</li>
+            </ul>
+          </section>
+
+          <section class="howto-section">
+            <h3>🔢 Step 4 — Quality Check</h3>
+            <p>After downloading, run an optional quality check. The tool transcribes each embedded audio clip with Azure Speech-to-Text and scores it against your original script using AI. Results show a confidence percentage and any critical or minor discrepancies per slide.</p>
+            <p>The script and voice fields are pre-filled from Step 1 — just click <strong>Run Quality Check →</strong>.</p>
+          </section>
+
+          <section class="howto-section">
+            <h3>💡 Tips</h3>
+            <ul>
+              <li>Keep script sections concise — very long passages may hit TTS character limits.</li>
+              <li>If slide counts don't match, use the Step 2 dropdowns to reassign script sections manually.</li>
+              <li>MP4 export takes a minute or two for large decks — the progress bar keeps you informed.</li>
+              <li>Click <strong>Start Over</strong> to reset everything and begin with a new presentation.</li>
+            </ul>
+          </section>
+
+        </div>
+      </div>
+    </div>
 
     <!-- ── Stepper ── -->
     <nav class="stepper" aria-label="Wizard steps">
@@ -321,6 +399,7 @@
     </main>
   </div>
   {{ENV_BANNER}}
+  <div class="app-version">v1.2.0</div>
 
   <script src="/static/app.js"></script>
 </body>

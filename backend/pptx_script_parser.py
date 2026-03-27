@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.identity import DefaultAzureCredential
+from azure_credential import get_credential
 
 _A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 _P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -80,7 +80,7 @@ def _ocr_pptx_pages(pptx_bytes: bytes) -> list[str]:
     print("[OCR] Running Document Intelligence on PPTX...", flush=True)
     client = DocumentIntelligenceClient(
         endpoint=_DOC_INTEL_ENDPOINT,
-        credential=DefaultAzureCredential(),
+        credential=get_credential(),
     )
     poller = client.begin_analyze_document(
         "prebuilt-layout",
