@@ -135,6 +135,7 @@ public class NarrationController : ControllerBase
             }
             catch (Exception ex)
             {
+                _log.LogError(ex, "[Process] TTS failed for slide {W}→{P}", wordIdx + 1, pptxIdx + 1);
                 return StatusCode(502, new { detail = $"TTS failed for slide {wordIdx + 1}: {ex.Message}" });
             }
         }

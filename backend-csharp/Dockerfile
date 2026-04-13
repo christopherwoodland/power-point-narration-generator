@@ -23,8 +23,16 @@ WORKDIR /app
 RUN groupadd --system --gid 1001 appgroup \
     && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
-# ffmpeg is required by SttService for audio conversion
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+# ffmpeg is required by SttService; curl is used by the Docker health check
+# azure-cli is required by DefaultAzureCredential (AzureCliCredential) for local dev
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl apt-transport-https gnupg lsb-release ffmpeg \
+    && curl -sLS https://packages.microsoft.com/keys/microsoft.asc \
+       | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture)] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
+       > /etc/apt/sources.list.d/azure-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends azure-cli \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app .

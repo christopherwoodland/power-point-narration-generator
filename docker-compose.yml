@@ -21,10 +21,16 @@ services:
       AZURE_IMAGE_DEPLOYMENT: "${AZURE_IMAGE_DEPLOYMENT:-dall-e-3}"
       AZURE_DOC_INTEL_ENDPOINT: "${AZURE_DOC_INTEL_ENDPOINT:-}"
       APP_BANNER_MESSAGE: "${APP_BANNER_MESSAGE:-}"
-      # For local dev with Azure CLI credentials pass through host identity.
-      # In production use Managed Identity (no env vars needed).
+      # For local dev: pass the host's Azure CLI credentials into the container so
+      # DefaultAzureCredential (AzureCliCredential) can obtain tokens without API keys.
+      # In production use Managed Identity (no env vars or volume mounts needed).
+      AZURE_CONFIG_DIR: "/azure-config"
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
+    volumes:
+      # Mount host Azure CLI config (read-only) so AzureCliCredential works inside the container.
+      # Requires 'az login' on the host before running docker compose up.
+      - "${USERPROFILE}/.azure:/azure-config:ro"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
@@ -39,7 +45,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ""        # Empty → Vite proxy will forward /api/* to backend at dev time
+        VITE_API_URL: "" # Empty → Vite proxy will forward /api/* to backend at dev time
     image: pptx-narrator-frontend:local
     container_name: pptx-narrator-frontend
     ports:

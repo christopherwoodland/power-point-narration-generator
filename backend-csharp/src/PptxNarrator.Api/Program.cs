@@ -29,11 +29,12 @@ builder.Services.Configure<AppOptions>(opts =>
 });
 
 // ── Azure Identity (DefaultAzureCredential — no API keys) ─────────────────
+var azureTenantId = builder.Configuration["AZURE_TENANT_ID"];
 builder.Services.AddSingleton<Azure.Core.TokenCredential>(_ =>
     new DefaultAzureCredential(new DefaultAzureCredentialOptions
     {
         // Ensure the correct tenant is used for both dev (AzureCLI) and prod (ManagedIdentity)
-        TenantId = builder.Configuration["AZURE_TENANT_ID"]
+        TenantId = string.IsNullOrWhiteSpace(azureTenantId) ? null : azureTenantId
     }));
 
 // ── HTTP clients ───────────────────────────────────────────────────────────
@@ -65,6 +66,9 @@ var aiConnStr = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
 if (!string.IsNullOrWhiteSpace(aiConnStr))
     builder.Services.AddApplicationInsightsTelemetry(opts => opts.ConnectionString = aiConnStr);
 
+// ── Health checks ────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks();
+
 // ── ASP.NET Core pipeline ──────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -78,6 +82,8 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 var app = builder.Build();
 
 app.UseCors();
+
+app.MapHealthChecks("/healthz");
 
 if (app.Environment.IsDevelopment())
 {

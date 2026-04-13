@@ -1,9 +1,10 @@
 # run-docker.ps1 — Run the PowerPoint Narration Generator locally via Docker Compose
 #
 # Builds both images (C# backend + React frontend) and starts them together.
-# Azure identity is provided via DefaultAzureCredential in the container — the
-# host's 'az login' session is NOT passed in; run in Azure Container Apps or
-# set AZURE_CLIENT_ID / AZURE_CLIENT_SECRET in a .env file for service principals.
+# Azure identity is provided via DefaultAzureCredential (AzureCliCredential):
+#   - The host's ~/.azure config is mounted read-only into the container.
+#   - Run 'az login' on the host before running this script.
+#   - In Azure Container Apps (production) Managed Identity is used instead.
 #
 # Usage:  .\run-docker.ps1
 # Then open:  http://localhost:3000  (frontend)
