@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    // C# / .NET
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    // Frontend
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    // Azure
+    "ms-vscode.azure-account",
+    "ms-azuretools.vscode-docker",
+    "ms-azuretools.vscode-azurecontainerapps",
+    "ms-azuretools.vscode-bicep",
+    // Dev Container
+    "ms-vscode-remote.remote-containers",
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    // Utilities
+    "streetsidesoftware.code-spell-checker",
+    "editorconfig.editorconfig"
+  ]
+}
