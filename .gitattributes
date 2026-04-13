@@ -1,0 +1,21 @@
+# Normalise line endings on commit
+* text=auto
+
+# Shell scripts must always be LF (bash fails on CRLF)
+*.sh text eol=lf
+
+# PowerShell scripts use CRLF on Windows, LF elsewhere
+*.ps1 text eol=crlf
+
+# Explicitly binary — never mangle
+*.pptx binary
+*.docx binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary

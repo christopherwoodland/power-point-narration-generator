@@ -12,6 +12,9 @@ interface Props {
 }
 
 export default function Step3Generate({ state, config, onResultReady, onQualityCheck, onRestart }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { panelRef.current?.focus(); }, []);
+
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('Starting…');
   const [done, setDone] = useState(false);
@@ -136,7 +139,7 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
   };
 
   return (
-    <div className="panel" data-testid="step-3">
+    <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-3">
       <div className="panel-header" aria-live="polite" aria-atomic="true">
         <h2 className="panel-title">
           {done ? 'Your narrated presentation is ready' : 'Generating narrated presentation…'}

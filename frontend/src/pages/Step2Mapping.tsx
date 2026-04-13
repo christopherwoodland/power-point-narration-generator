@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { WizardState } from '../types';
 import SlideMappingTable from '../components/SlideMappingTable';
 
@@ -9,11 +10,14 @@ interface Props {
 }
 
 export default function Step2Mapping({ state, onMappingChange, onBack, onNext }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { panelRef.current?.focus(); }, []);
+
   const { parsedSlides, pptxSlideCount, aiMode, slideMapping } = state;
   const diff = parsedSlides.length - pptxSlideCount;
 
   return (
-    <div className="panel" data-testid="step-2">
+    <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-2">
       <div className="panel-header">
         <h2 className="panel-title">
           {aiMode ? 'Review slides for AI generation' : 'Review slide mapping'}

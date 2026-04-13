@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { QualityCheckResult, WizardState } from '../types';
 import { runQualityCheck } from '../api/narrationApi';
 import QualityResults from '../components/QualityResults';
@@ -12,6 +12,9 @@ interface Props {
 }
 
 export default function Step4QualityCheck({ state, onBack, onRestart }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { panelRef.current?.focus(); }, []);
+
   const [qcScript, setQcScript] = useState<File | null>(state.scriptFile);
   const [qcPptx, setQcPptx] = useState<File | null>(null);
   const [qcVoice, setQcVoice] = useState(state.voice);
@@ -46,7 +49,7 @@ export default function Step4QualityCheck({ state, onBack, onRestart }: Props) {
   };
 
   return (
-    <div className="panel" data-testid="step-4">
+    <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-4">
       <div className="panel-header">
         <h2 className="panel-title">Quality Check</h2>
         <p className="panel-subtitle">
@@ -96,6 +99,7 @@ export default function Step4QualityCheck({ state, onBack, onRestart }: Props) {
           <button
             className="btn btn--primary"
             disabled={!canRun}
+            aria-busy={running}
             data-testid="btn-run-qc"
             onClick={handleRun}
           >

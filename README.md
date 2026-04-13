@@ -35,11 +35,37 @@ Upload your script and an existing PowerPoint deck, map slides, and the tool syn
 | Video export | FFmpeg + PowerPoint COM (Windows) or LibreOffice (Linux) |
 | Observability | Structured logging via `ILogger<T>`; optional Application Insights |
 | Containers | Docker + Docker Compose |
+| Dev Container | VS Code Dev Container (Ubuntu 24.04 + .NET 10 + Node 20 + Azure CLI + FFmpeg) |
 | IaC | Azure Bicep (Container Apps) |
 
 ---
 
-## Prerequisites
+## Dev Container (recommended)
+
+The fastest way to get a fully configured environment is to open the repo in a [VS Code Dev Container](https://code.visualstudio.com/docs/devcontainers/containers).
+
+**Prerequisites:** Docker Desktop + the VS Code [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
+```
+1. Open the repo in VS Code
+2. Command Palette → "Dev Containers: Reopen in Container"
+3. Wait ~3 min for the first build (subsequent opens are instant)
+```
+
+The container automatically provides:
+- .NET 10 SDK
+- Node.js 20 LTS + npm
+- Azure CLI (+ Bicep)
+- FFmpeg
+- Docker CLI (Docker-outside-of-Docker)
+- All recommended VS Code extensions
+- `npm install` + `dotnet restore` + `.env` creation run automatically
+
+After the container starts, run `az login` and then `bash scripts/run.sh` (or `pwsh scripts/run.ps1`) to start both services.
+
+---
+
+## Prerequisites (without Dev Container)
 
 | Requirement | Notes |
 |-------------|-------|
@@ -81,8 +107,14 @@ cd ../../..
 
 ### 4. Start both services
 
+**Windows (PowerShell):**
 ```powershell
 .\scripts\run.ps1
+```
+
+**Linux / macOS / Dev Container:**
+```bash
+bash scripts/run.sh
 ```
 
 Then open **http://localhost:3000** in your browser.  
@@ -161,17 +193,22 @@ The 4-step wizard guides you through:
 
 ```
 powerpoint-add-tool/
+├── .devcontainer/                 # VS Code Dev Container configuration
+│   ├── devcontainer.json          # Container definition, features, extensions
+│   ├── on-create.sh               # System packages (ffmpeg, etc.)
+│   └── post-create.sh             # npm install, dotnet restore, .env copy
 ├── .env.example                   # Configuration template
 ├── .gitignore
 ├── docker-compose.yml             # Local Docker Compose (C# + React/Nginx)
 ├── README.md
 │
 ├── scripts/                       # Development and deployment scripts
-│   ├── run.ps1                    # Start C# backend + Vite frontend (dev)
+│   ├── run.ps1                    # Start C# backend + Vite frontend (PowerShell / Windows)
+│   ├── run.sh                     # Start C# backend + Vite frontend (Bash / Linux / Dev Container)
 │   ├── run-docker.ps1             # Build and run via Docker Compose
 │   └── deploy.ps1                 # Build images, push to ACR, deploy Bicep
 │
-├── backend-csharp/                # ASP.NET Core 8 backend
+├── backend-csharp/                # ASP.NET Core 10 backend
 │   ├── Dockerfile
 │   ├── PptxNarrator.sln
 │   ├── src/PptxNarrator.Api/
@@ -219,7 +256,7 @@ Covers:
 
 ### Playwright end-to-end tests
 
-Ensure the frontend dev server is running (`.\scripts\run.ps1` or `npm run dev` in `frontend/`), then:
+Ensure the frontend dev server is running (`bash scripts/run.sh` or `.\scripts\run.ps1` on Windows, or `npm run dev` in `frontend/`), then:
 
 ```powershell
 cd frontend

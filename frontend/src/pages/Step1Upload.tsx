@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AppConfig, SlideInfo, WizardState } from '../types';
 import { parseScript } from '../api/narrationApi';
 import FileUploadCard from '../components/FileUploadCard';
@@ -12,6 +12,9 @@ interface Props {
 }
 
 export default function Step1Upload({ state, config, onChange, onNext }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { panelRef.current?.focus(); }, []);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +44,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
   };
 
   return (
-    <div className="panel" data-testid="step-1">
+    <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-1">
       <div className="panel-header">
         <h2 className="panel-title">Upload your files</h2>
         <p className="panel-subtitle">

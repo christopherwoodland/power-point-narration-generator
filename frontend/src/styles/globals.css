@@ -242,6 +242,13 @@ body {
   max-width: 880px;
 }
 
+/* Suppress the browser focus ring on panels focused programmatically for
+   screen-reader step transitions (tabIndex={-1}). Keyboard users never reach
+   these divs directly so hiding the outline here is intentional and safe. */
+.panel:focus {
+  outline: none;
+}
+
 .panel-header {
   margin-bottom: 24px;
 }
