@@ -20,19 +20,14 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Run as non-root
-RUN addgroup --system --gid 1001 appgroup \
- && adduser  --system --uid 1001 --ingroup appgroup appuser
+RUN groupadd --system --gid 1001 appgroup \
+    && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
 # ffmpeg is required by SttService for audio conversion
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app .
-
-# Optional: copy pre-built React static files (injected by docker-compose build
-# or a separate frontend image). When the C# app is deployed standalone (e.g.
-# Container App with no frontend sidecar) the wwwroot folder is not needed.
-COPY --from=build /app/wwwroot ./wwwroot 2>/dev/null || true
 
 RUN chown -R appuser:appgroup /app
 USER appuser
