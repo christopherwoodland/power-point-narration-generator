@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus2"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "containerRegistryName": {
+      "value": "REPLACE_WITH_YOUR_ACR_NAME"
+    },
+    "backendImage": {
+      "value": "REPLACE_WITH_YOUR_ACR_NAME.azurecr.io/narrator-backend:latest"
+    },
+    "frontendImage": {
+      "value": "REPLACE_WITH_YOUR_ACR_NAME.azurecr.io/narrator-frontend:latest"
+    },
+    "enableQualityCheck": {
+      "value": true
+    },
+    "enableAiMode": {
+      "value": true
+    },
+    "enableVideoExport": {
+      "value": true
+    },
+    "azureSpeechResourceName": {
+      "value": "bhs-development-public-foundry-r"
+    },
+    "azureSpeechRegion": {
+      "value": "eastus2"
+    },
+    "azureOpenAiEndpoint": {
+      "value": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com"
+    },
+    "azureOpenAiDeployment": {
+      "value": "gpt-4o"
+    },
+    "azureImageDeployment": {
+      "value": "dall-e-3"
+    },
+    "azureDocIntelEndpoint": {
+      "value": ""
+    },
+    "appBannerMessage": {
+      "value": ""
+    }
+  }
+}

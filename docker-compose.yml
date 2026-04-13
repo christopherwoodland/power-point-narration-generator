@@ -1,0 +1,52 @@
+services:
+  # ── C# backend ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend-csharp
+      dockerfile: Dockerfile
+    image: pptx-narrator-backend:local
+    container_name: pptx-narrator-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Feature flags
+      ENABLE_QUALITY_CHECK: "${ENABLE_QUALITY_CHECK:-true}"
+      ENABLE_AI_MODE: "${ENABLE_AI_MODE:-true}"
+      ENABLE_VIDEO_EXPORT: "${ENABLE_VIDEO_EXPORT:-true}"
+      # Azure settings – override via .env file or shell
+      AZURE_SPEECH_RESOURCE_NAME: "${AZURE_SPEECH_RESOURCE_NAME:-bhs-development-public-foundry-r}"
+      AZURE_SPEECH_REGION: "${AZURE_SPEECH_REGION:-eastus2}"
+      AZURE_OPENAI_ENDPOINT: "${AZURE_OPENAI_ENDPOINT:-}"
+      AZURE_OPENAI_DEPLOYMENT: "${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}"
+      AZURE_IMAGE_DEPLOYMENT: "${AZURE_IMAGE_DEPLOYMENT:-dall-e-3}"
+      AZURE_DOC_INTEL_ENDPOINT: "${AZURE_DOC_INTEL_ENDPOINT:-}"
+      APP_BANNER_MESSAGE: "${APP_BANNER_MESSAGE:-}"
+      # For local dev with Azure CLI credentials pass through host identity.
+      # In production use Managed Identity (no env vars needed).
+      AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
+      AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── React / Nginx frontend ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""        # Empty → Vite proxy will forward /api/* to backend at dev time
+    image: pptx-narrator-frontend:local
+    container_name: pptx-narrator-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    # Inject the backend URL into Nginx for runtime API path rewriting
+    environment:
+      BACKEND_URL: "http://backend:8080"
