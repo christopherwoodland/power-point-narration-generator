@@ -36,12 +36,18 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app .
+COPY entrypoint.sh /entrypoint.sh
 
-RUN chown -R appuser:appgroup /app
+# Create writable azure-config dir; the entrypoint copies read-only host
+# credentials from /azure-config-ro into /azure-config at container start.
+RUN chmod +x /entrypoint.sh \
+    && mkdir -p /azure-config \
+    && chown -R appuser:appgroup /app /azure-config
 USER appuser
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV AZURE_CONFIG_DIR=/azure-config
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "PptxNarrator.Api.dll"]
+ENTRYPOINT ["/entrypoint.sh", "dotnet", "PptxNarrator.Api.dll"]

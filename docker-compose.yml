@@ -24,13 +24,15 @@ services:
       # For local dev: pass the host's Azure CLI credentials into the container so
       # DefaultAzureCredential (AzureCliCredential) can obtain tokens without API keys.
       # In production use Managed Identity (no env vars or volume mounts needed).
-      AZURE_CONFIG_DIR: "/azure-config"
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
     volumes:
-      # Mount host Azure CLI config (read-only) so AzureCliCredential works inside the container.
-      # Requires 'az login' on the host before running docker compose up.
-      - "${USERPROFILE}/.azure:/azure-config:ro"
+      # Named volume keeps Azure CLI credentials in Linux format inside the container.
+      # Windows' msal_token_cache.bin is DPAPI-encrypted and can't be used on Linux.
+      # One-time setup after first 'docker compose up':
+      #   docker exec -it pptx-narrator-backend az login --use-device-code
+      # The volume persists across 'docker compose down/up' (not 'down -v').
+      - azure-cli-config:/azure-config
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
@@ -56,3 +58,8 @@ services:
     # Inject the backend URL into Nginx for runtime API path rewriting
     environment:
       BACKEND_URL: "http://backend:8080"
+
+volumes:
+  # Stores Azure CLI credentials in Linux-native format so DefaultAzureCredential works.
+  # Persists across 'docker compose down/up'. Re-run 'az login' only if explicitly removed.
+  azure-cli-config:
