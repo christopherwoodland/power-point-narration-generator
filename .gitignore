@@ -1,0 +1,51 @@
+# ── Secrets / local config ────────────────────────────────────────────────────
+.env
+backend-csharp/src/PptxNarrator.Api/appsettings.json
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ── .NET ──────────────────────────────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.nupkg
+
+# ── Node / React ─────────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+npm-debug.log*
+
+# ── Playwright ───────────────────────────────────────────────────────────────
+frontend/test-results/
+frontend/playwright-report/
+playwright-report/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+*.dockerignore
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ───────────────────────────────────────────────────────────────────
+.vscode/settings.json
+*.swp
+*.swo
+
+# ── Generated output (do not commit generated presentations or test artifacts)
+*.pptx
+!infra/**/*.pptx

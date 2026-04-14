@@ -1,33 +1,38 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Test artifacts
-test_output.pptx
-test_parse.py
-test_embed.py
-
-# VS Code
-.vscode/
-
-# Git
+# ── Version control ──────────────────────────────────────────────────────────
 .git/
 .gitignore
 
-# Docker
-Dockerfile
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/
+*.swp
+*.swo
+
+# ── Local dev / secrets ───────────────────────────────────────────────────────
+.env
+.venv/
+
+# ── Build outputs ─────────────────────────────────────────────────────────────
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+**/TestResults/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
 .dockerignore
 
-# Deployment scripts (not needed in image)
-deploy.ps1
+# ── Scripts (not needed inside the image) ─────────────────────────────────────
+scripts/
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+README.md
+
+# ── Test artifacts ────────────────────────────────────────────────────────────
+frontend/tests/
+frontend/playwright-report/
+frontend/test-results/
+backend-csharp/tests/
+
 run.ps1
 
 # Local dev files — the real uploads come in via the API

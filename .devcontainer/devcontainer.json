@@ -1,0 +1,100 @@
+{
+  "name": "PowerPoint Narrator",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  // ── Dev Container Features ─────────────────────────────────────────────────
+  "features": {
+    // .NET 10 SDK
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0",
+      "installUsingApt": true
+    },
+    // Node.js 20 LTS (Vite dev server + npm)
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": false
+    },
+    // Azure CLI — enables `az login` for DefaultAzureCredential
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "latest",
+      "installBicep": true
+    },
+    // Docker-outside-of-Docker — lets `docker compose` work inside the container
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false,
+      "installDockerBuildx": true,
+      "installDockerComposeSwitch": true
+    },
+    // PowerShell Core (pwsh) — needed for scripts/*.ps1
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "version": "latest"
+    },
+    // GitHub CLI (optional, handy for PRs)
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  // ── Lifecycle hooks ────────────────────────────────────────────────────────
+  "onCreateCommand": "bash .devcontainer/on-create.sh",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  // ── Port forwarding ────────────────────────────────────────────────────────
+  "forwardPorts": [3000, 8080],
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend (Vite)",
+      "onAutoForward": "openPreview"
+    },
+    "8080": {
+      "label": "Backend (ASP.NET Core / Swagger)",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // ── VS Code settings & extensions ─────────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // C# settings
+        "dotnet.defaultSolution": "backend-csharp/PptxNarrator.sln",
+        "omnisharp.enableRoslynAnalyzers": true,
+        "omnisharp.enableEditorConfigSupport": true,
+        // TypeScript / React
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "eslint.workingDirectories": ["frontend"],
+        // Editor
+        "editor.formatOnSave": true,
+        "editor.rulers": [120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        // Terminal
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        // C# / .NET
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        // Frontend
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright",
+        // Azure
+        "ms-vscode.azure-account",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-azurecontainerapps",
+        "ms-azuretools.vscode-bicep",
+        // Git
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        // Utilities
+        "streetsidesoftware.code-spell-checker",
+        "editorconfig.editorconfig"
+      ]
+    }
+  },
+
+  // ── Container user ─────────────────────────────────────────────────────────
+  "remoteUser": "vscode"
+}

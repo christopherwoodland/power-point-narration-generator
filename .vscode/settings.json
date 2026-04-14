@@ -1,4 +1,13 @@
 {
+    "dotnet.defaultSolution": "backend-csharp/PptxNarrator.sln",
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "typescript.tsdk": "frontend/node_modules/typescript/lib",
+    "eslint.workingDirectories": ["frontend"],
+    "editor.formatOnSave": true,
+    "editor.rulers": [120],
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
