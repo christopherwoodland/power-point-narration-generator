@@ -53,6 +53,7 @@ public class NarrationController : ControllerBase
         enable_ai_mode = _opts.EnableAiMode,
         enable_video_export = _opts.EnableVideoExport,
         banner_message = _opts.AppBannerMessage,
+        tts_mode = _opts.AzureTtsMode,
     });
 
     // ── POST /api/parse ───────────────────────────────────────────────────
@@ -251,10 +252,18 @@ public class NarrationController : ControllerBase
                 await Response.Body.FlushAsync(ct);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await Response.WriteAsync(
-                System.Text.Json.JsonSerializer.Serialize(new { type = "error", message = ex.Message }) + "\n", ct);
+            // Use CancellationToken.None so a previously-cancelled ct doesn't prevent
+            // the error event from being flushed to the client.
+            try
+            {
+                await Response.WriteAsync(
+                    System.Text.Json.JsonSerializer.Serialize(new { type = "error", message = ex.Message }) + "\n",
+                    CancellationToken.None);
+                await Response.Body.FlushAsync(CancellationToken.None);
+            }
+            catch { /* best-effort — connection may already be gone */ }
         }
     }
 

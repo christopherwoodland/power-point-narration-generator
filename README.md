@@ -77,7 +77,10 @@ After the container starts, run `az login` and then `bash scripts/run.sh` (or `p
 | [FFmpeg](https://ffmpeg.org/download.html) on PATH | Required for video export only |
 | Docker Desktop | For Docker Compose / container workflow only |
 
-> **Auth note:** All Azure connections use `DefaultAzureCredential`. For local dev, `az login` is sufficient. In production (Container Apps) use Managed Identity — no secrets or API keys are used.
+> **Auth note:** All Azure connections use `DefaultAzureCredential` — no API keys anywhere.
+> - **Native dev (`run.ps1`):** `az login` on the host is sufficient.
+> - **Docker Compose (`run-docker.ps1`):** Requires a service principal (`AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET` in `.env`) because the Windows DPAPI-encrypted token cache cannot be read by Linux containers. See the [Running with Docker Compose](#running-with-docker-compose) section.
+> - **Production (Container Apps):** Managed Identity — no secrets or env vars needed.
 
 ---
 
@@ -117,14 +120,55 @@ cd ../../..
 bash scripts/run.sh
 ```
 
-Then open **http://localhost:3000** in your browser.  
+Then open **http://localhost:3000** in your browser.
 Swagger UI is available at **http://localhost:8080/swagger**.
 
 ---
 
 ## Running with Docker Compose
 
-Builds both images and starts them together:
+> **Note:** `run.ps1` / `run.sh` (native .NET + Vite) is the simpler path for day-to-day local development — it uses your host `az login` session directly and requires no extra setup.
+> Use Docker Compose when you want to test the containerised deployment (closer to production).
+
+### Why Docker requires a service principal
+
+Windows encrypts the Azure CLI token cache (`msal_token_cache.bin`) with DPAPI — a Windows-only mechanism that Linux containers cannot decrypt. This means the host `az login` session **cannot** be shared with the container. Instead, the container uses `EnvironmentCredential` (client ID + secret) which `DefaultAzureCredential` picks up automatically.
+
+### One-time setup
+
+**1. Use the existing service principal (already has the required roles):**
+
+| Setting | Value |
+|---------|-------|
+| `AZURE_TENANT_ID` | `16b3c013-d300-468d-ac64-7eda0820b6d3` |
+| `AZURE_CLIENT_ID` | `98e8135d-5ca5-4015-b0ac-825ae189de20` |
+| `AZURE_CLIENT_SECRET` | *(generate a new secret — see below)* |
+
+The SP already has these roles on `bhs-development-public-foundry-r`:
+- `Cognitive Services User` — required for the Speech STS `/issueToken` exchange
+- `Cognitive Services Speech User`
+- `Cognitive Services OpenAI User`
+
+**2. If the secret has expired, create a new one** (tenant policy limits lifetime, check the max allowed):
+
+```powershell
+az ad app credential reset `
+  --id 98e8135d-5ca5-4015-b0ac-825ae189de20 `
+  --display-name "pptx-narrator-local" `
+  --end-date <YYYY-MM-DD>   # within the tenant policy limit
+```
+
+Copy the `password` field from the output.
+
+**3. Add the credentials to `.env`:**
+
+```env
+AZURE_TENANT_ID=16b3c013-d300-468d-ac64-7eda0820b6d3
+AZURE_CLIENT_ID=98e8135d-5ca5-4015-b0ac-825ae189de20
+AZURE_CLIENT_SECRET=<password from above>
+```
+
+### Start
 
 ```powershell
 .\scripts\run-docker.ps1
@@ -348,17 +392,17 @@ The frontend meets **WCAG 2.1 Level AA / Section 508** standards:
 
 ## Troubleshooting
 
-**Backend won't start / auth errors**  
+**Backend won't start / auth errors**
 Run `az login --tenant 16b3c013-d300-468d-ac64-7eda0820b6d3`. If `AZURE_TENANT_ID` is not set, `DefaultAzureCredential` may pick up a different tenant token.
 
-**No telemetry in Application Insights**  
+**No telemetry in Application Insights**
 Set `APPLICATIONINSIGHTS_CONNECTION_STRING` in your environment or `appsettings.json`. When left blank, the app runs without App Insights — no error is raised. Structured logs always go to the console/host logger regardless.
 
-**PPTX opens with a repair dialog**  
+**PPTX opens with a repair dialog**
 This was a known issue now fixed. Make sure you are running a build from after the `PptxBuilderService` and `AiPptxGeneratorService` fixes (Content_Types, timing XML, theme part).
 
-**Video export fails**  
+**Video export fails**
 Ensure `ffmpeg` is installed and on your PATH. On Windows, PowerPoint must be installed for slide rendering via COM. On Linux/Mac, install `libreoffice` and `poppler-utils` (`pdftoppm`).
 
-**AI mode fails**  
+**AI mode fails**
 Set `AZURE_OPENAI_ENDPOINT` and confirm your deployment names match `AZURE_OPENAI_DEPLOYMENT` (default `gpt-4o`) and `AZURE_IMAGE_DEPLOYMENT` (default `dall-e-3`).

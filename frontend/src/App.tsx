@@ -13,13 +13,14 @@ const DEFAULT_CONFIG: AppConfig = {
   enable_ai_mode: true,
   enable_video_export: true,
   banner_message: '',
+  tts_mode: 'standard',
 };
 
 const DEFAULT_STATE: WizardState = {
   step: 1,
   scriptFile: null,
   pptxFile: null,
-  voice: 'en-US-JennyNeural',
+  voice: 'en-US-Grant:MAI-Voice-1',
   aiMode: false,
   parsedSlides: [],
   pptxSlideCount: 0,

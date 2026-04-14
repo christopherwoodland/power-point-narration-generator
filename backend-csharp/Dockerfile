@@ -23,10 +23,13 @@ WORKDIR /app
 RUN groupadd --system --gid 1001 appgroup \
     && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
-# ffmpeg is required by SttService; curl is used by the Docker health check
+# ffmpeg is required by VideoExporterService for encoding MP4 clips
+# libreoffice is required by VideoExporterService for headless PPTX→PDF rendering on Linux
+# poppler-utils provides pdftoppm for PDF→PNG slide extraction
 # azure-cli is required by DefaultAzureCredential (AzureCliCredential) for local dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl apt-transport-https gnupg lsb-release ffmpeg \
+       libreoffice-impress libreoffice-calc libreoffice-writer poppler-utils \
     && curl -sLS https://packages.microsoft.com/keys/microsoft.asc \
        | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
     && echo "deb [arch=$(dpkg --print-architecture)] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
@@ -48,6 +51,8 @@ USER appuser
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV AZURE_CONFIG_DIR=/azure-config
+# LibreOffice needs a writable HOME for its user profile when running headless
+ENV HOME=/tmp
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh", "dotnet", "PptxNarrator.Api.dll"]

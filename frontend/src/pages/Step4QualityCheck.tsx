@@ -76,7 +76,7 @@ export default function Step4QualityCheck({ state, onBack, onRestart }: Props) {
         />
       </div>
 
-      <VoiceSelector value={qcVoice} onChange={setQcVoice} disabled={running} />
+      <VoiceSelector value={qcVoice} onChange={setQcVoice} disabled={running} ttsMode={state.config.tts_mode} />
 
       {error && (
         <div className="alert alert--error" role="alert" data-testid="qc-error">

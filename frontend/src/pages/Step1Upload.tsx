@@ -99,6 +99,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
         value={state.voice}
         onChange={v => onChange({ voice: v })}
         disabled={loading}
+        ttsMode={config.tts_mode}
       />
 
       {error && (

@@ -16,23 +16,20 @@ services:
       # Azure settings – override via .env file or shell
       AZURE_SPEECH_RESOURCE_NAME: "${AZURE_SPEECH_RESOURCE_NAME:-bhs-development-public-foundry-r}"
       AZURE_SPEECH_REGION: "${AZURE_SPEECH_REGION:-eastus2}"
+      AZURE_TTS_MODE: "${AZURE_TTS_MODE:-standard}"
+      AZURE_VOICE_ENDPOINT: "${AZURE_VOICE_ENDPOINT:-}"
       AZURE_OPENAI_ENDPOINT: "${AZURE_OPENAI_ENDPOINT:-}"
-      AZURE_OPENAI_DEPLOYMENT: "${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}"
-      AZURE_IMAGE_DEPLOYMENT: "${AZURE_IMAGE_DEPLOYMENT:-dall-e-3}"
+      AZURE_OPENAI_DEPLOYMENT: "${AZURE_OPENAI_DEPLOYMENT:-gpt-5.2}"
+      AZURE_IMAGE_ENDPOINT: "${AZURE_IMAGE_ENDPOINT:-}"
+      AZURE_IMAGE_DEPLOYMENT: "${AZURE_IMAGE_DEPLOYMENT:-MAI-Image-2e}"
       AZURE_DOC_INTEL_ENDPOINT: "${AZURE_DOC_INTEL_ENDPOINT:-}"
       APP_BANNER_MESSAGE: "${APP_BANNER_MESSAGE:-}"
-      # For local dev: pass the host's Azure CLI credentials into the container so
-      # DefaultAzureCredential (AzureCliCredential) can obtain tokens without API keys.
-      # In production use Managed Identity (no env vars or volume mounts needed).
+      # Local Docker dev: service principal credentials for DefaultAzureCredential.
+      # Set AZURE_CLIENT_ID + AZURE_CLIENT_SECRET in a .env file (gitignored).
+      # In production on Azure Container Apps, leave blank — Managed Identity is used.
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
-    volumes:
-      # Named volume keeps Azure CLI credentials in Linux format inside the container.
-      # Windows' msal_token_cache.bin is DPAPI-encrypted and can't be used on Linux.
-      # One-time setup after first 'docker compose up':
-      #   docker exec -it pptx-narrator-backend az login --use-device-code
-      # The volume persists across 'docker compose down/up' (not 'down -v').
-      - azure-cli-config:/azure-config
+      AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET:-}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
@@ -58,8 +55,3 @@ services:
     # Inject the backend URL into Nginx for runtime API path rewriting
     environment:
       BACKEND_URL: "http://backend:8080"
-
-volumes:
-  # Stores Azure CLI credentials in Linux-native format so DefaultAzureCredential works.
-  # Persists across 'docker compose down/up'. Re-run 'az login' only if explicitly removed.
-  azure-cli-config:

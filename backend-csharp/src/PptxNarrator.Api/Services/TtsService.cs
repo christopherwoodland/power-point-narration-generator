@@ -32,6 +32,15 @@ public sealed class TtsService : ITtsService
 
     public async Task<byte[]> SynthesizeToMp3Async(string text, string voice, CancellationToken ct = default)
     {
+        return _opts.AzureTtsMode.Equals("mai", StringComparison.OrdinalIgnoreCase)
+            ? await SynthesizeMaiAsync(text, voice, ct)
+            : await SynthesizeStandardAsync(text, voice, ct);
+    }
+
+    // ── Standard Speech Service (regional TTS, STS token exchange) ───────
+
+    private async Task<byte[]> SynthesizeStandardAsync(string text, string voice, CancellationToken ct)
+    {
         var stsToken = await GetSpeechTokenAsync(ct);
         var ssml = BuildSsml(text, voice);
 
@@ -39,6 +48,33 @@ public sealed class TtsService : ITtsService
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("Authorization", $"Bearer {stsToken}");
+        request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
+        request.Headers.Add("User-Agent", "PptxNarrator/1.0");
+        request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");
+
+        var client = _http.CreateClient("tts");
+        var response = await client.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    // ── MAI-Voice-1 (Azure AI Foundry resource, direct AAD auth) ─────────
+
+    private async Task<byte[]> SynthesizeMaiAsync(string text, string voice, CancellationToken ct)
+    {
+        // Voice names must already include ':MAI-Voice-1' (e.g. en-US-Grant:MAI-Voice-1)
+        var ssml = BuildSsml(text, voice);
+
+        // Fresh AAD token — DefaultAzureCredential caches internally
+        var tokenCtx = new TokenRequestContext(new[] { CogScope });
+        var aad = await _credential.GetTokenAsync(tokenCtx, ct);
+
+        // Foundry TTS REST endpoint with aad#resourceId#token auth format
+        var url = $"{_opts.AzureVoiceEndpoint.TrimEnd('/')}/tts/cognitiveservices/v1";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("Authorization", $"Bearer {aad.Token}");
         request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
         request.Headers.Add("User-Agent", "PptxNarrator/1.0");
         request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");

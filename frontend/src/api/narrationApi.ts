@@ -10,6 +10,7 @@ export async function fetchConfig(): Promise<AppConfig> {
       enable_ai_mode: true,
       enable_video_export: true,
       banner_message: '',
+      tts_mode: 'standard',
     };
   }
   return res.json();

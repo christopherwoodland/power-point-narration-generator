@@ -142,7 +142,7 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
     <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-3">
       <div className="panel-header" aria-live="polite" aria-atomic="true">
         <h2 className="panel-title">
-          {done ? 'Your narrated presentation is ready' : 'Generating narrated presentation…'}
+          {done ? 'Narration complete' : 'Generating narrated presentation…'}
         </h2>
       </div>
 
@@ -164,22 +164,34 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
 
       {done && (
         <div className="done-wrap" data-testid="done-wrap">
-          <div className="done-icon" aria-hidden="true">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="24" r="22" fill="var(--color-violet-light)" />
-              <path d="M14 24l7 7 13-14" stroke="var(--color-violet)" strokeWidth="3"
-                strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div className="done-hero">
+            <div className="done-icon" aria-hidden="true">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" fill="var(--color-violet-light)" />
+                <circle cx="32" cy="32" r="30" stroke="var(--color-violet-mid)" strokeWidth="1.5" strokeOpacity="0.4" />
+                <path d="M19 32l9 9 17-18" stroke="var(--color-violet)" strokeWidth="3.5"
+                  strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="done-hero-text">
+              <h3 className="done-title">Ready to download</h3>
+              <p className="done-subtitle">
+                Audio has been synthesised and embedded into each slide.
+              </p>
+            </div>
           </div>
 
           <div className="done-actions">
             <a
               href={downloadUrl}
               download="narrated_presentation.pptx"
-              className="btn btn--primary"
+              className="btn btn--primary btn--lg"
               data-testid="download-link"
             >
-              <span aria-hidden="true">↓ </span>Download PPTX
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}>
+                <path d="M8 12l-4.5-4.5 1.06-1.06L7 8.88V2h2v6.88l2.44-2.44L12.5 7.5 8 12zM2 14h12v-2H2v2z"/>
+              </svg>
+              Download PPTX
             </a>
 
             {config.enable_quality_check && (
@@ -188,6 +200,9 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
                 data-testid="btn-quality-check"
                 onClick={onQualityCheck}
               >
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '5px', verticalAlign: 'text-bottom'}}>
+                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.75 10.5h-1.5v-5h1.5v5zm0-6.5h-1.5V3.5h1.5V5z"/>
+                </svg>
                 Run Quality Check
               </button>
             )}
@@ -199,7 +214,10 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
                 onClick={handleVideoExport}
                 disabled={exportingVideo}
               >
-                {exportingVideo ? videoLabel || 'Exporting video…' : 'Export as MP4'}
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '5px', verticalAlign: 'text-bottom'}}>
+                  <path d="M10.5 8L6 5v6l4.5-3zM2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z"/>
+                </svg>
+                {exportingVideo ? videoLabel || 'Exporting…' : 'Export as MP4'}
               </button>
             )}
 
@@ -210,24 +228,25 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
                 className="btn btn--secondary"
                 data-testid="download-video-link"
               >
-                <span aria-hidden="true">↓ </span>Download MP4
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}>
+                  <path d="M8 12l-4.5-4.5 1.06-1.06L7 8.88V2h2v6.88l2.44-2.44L12.5 7.5 8 12zM2 14h12v-2H2v2z"/>
+                </svg>
+                Download MP4
               </a>
             )}
 
-            {videoError && (
-              <p className="alert alert--error video-error">{videoError}</p>
-            )}
-
-            {exportingVideo && (
-              <div className="video-progress" aria-live="polite" aria-atomic="false">
-                <ProgressBar value={videoProgress} label={videoLabel} />
-              </div>
-            )}
-
-            <button className="btn btn--ghost" onClick={onRestart}>
-              Start over
-            </button>
+            <button className="btn btn--ghost" onClick={onRestart}>Start over</button>
           </div>
+
+          {videoError && (
+            <p className="alert alert--error video-error">{videoError}</p>
+          )}
+
+          {exportingVideo && (
+            <div className="video-progress" aria-live="polite" aria-atomic="false">
+              <ProgressBar value={videoProgress} label={videoLabel} />
+            </div>
+          )}
         </div>
       )}
     </div>

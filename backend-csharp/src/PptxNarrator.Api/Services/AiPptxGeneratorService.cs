@@ -192,10 +192,29 @@ public sealed class AiPptxGeneratorService : IAiPptxGeneratorService
         var tokenCtx = new TokenRequestContext(new[] { CogScope });
         var aad = await _credential.GetTokenAsync(tokenCtx, ct);
 
-        var url = $"{_opts.AzureOpenAiEndpoint.TrimEnd('/')}/openai/deployments/{_opts.AzureImageDeployment}" +
-                  $"/images/generations?api-version={_opts.ImageApiVersion}";
+        string url;
+        object payload;
 
-        var payload = new { prompt, size = "1024x1024", response_format = "b64_json" };
+        if (!string.IsNullOrWhiteSpace(_opts.AzureImageEndpoint))
+        {
+            // MAI endpoint: /mai/v1/images/generations — model specified in body
+            url = $"{_opts.AzureImageEndpoint.TrimEnd('/')}/mai/v1/images/generations";
+            payload = new
+            {
+                prompt,
+                width = 1024,
+                height = 1024,
+                n = 1,
+                model = _opts.AzureImageDeployment
+            };
+        }
+        else
+        {
+            // Azure OpenAI endpoint: /openai/deployments/{model}/images/generations
+            url = $"{_opts.AzureOpenAiEndpoint.TrimEnd('/')}/openai/deployments/{_opts.AzureImageDeployment}" +
+                  $"/images/generations?api-version={_opts.ImageApiVersion}";
+            payload = new { prompt, size = "1024x1024", response_format = "b64_json" };
+        }
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
         req.Headers.Add("Authorization", $"Bearer {aad.Token}");

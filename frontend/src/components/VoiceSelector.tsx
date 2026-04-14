@@ -4,10 +4,13 @@ interface Props {
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  ttsMode?: string;
 }
 
-export default function VoiceSelector({ value, onChange, disabled }: Props) {
-  const groups = [...new Set(VOICES.map(v => v.group))];
+export default function VoiceSelector({ value, onChange, disabled, ttsMode }: Props) {
+  const isMai = ttsMode === 'mai';
+  const filtered = isMai ? VOICES.filter(v => v.group === 'English (MAI)') : VOICES.filter(v => v.group !== 'English (MAI)');
+  const groups = [...new Set(filtered.map(v => v.group))];
 
   return (
     <div className="field">
@@ -21,7 +24,7 @@ export default function VoiceSelector({ value, onChange, disabled }: Props) {
       >
         {groups.map(group => (
           <optgroup key={group} label={group}>
-            {VOICES.filter(v => v.group === group).map(v => (
+            {filtered.filter(v => v.group === group).map(v => (
               <option key={v.value} value={v.value}>{v.label}</option>
             ))}
           </optgroup>

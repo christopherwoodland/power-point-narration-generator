@@ -83,7 +83,20 @@ public sealed class VideoExporterService : IVideoExporterService
 
                 audioPerSlide.TryGetValue(slideNum, out var audioPath);
                 var clipPath = Path.Combine(tmpDir, $"clip_{slideNum:D4}.mp4");
-                await BuildClipAsync(pngPath, audioPath, clipPath, ct);
+                string? clipError = null;
+                try
+                {
+                    await BuildClipAsync(pngPath, audioPath, clipPath, ct);
+                }
+                catch (Exception ex)
+                {
+                    clipError = $"Failed to encode slide {slideNum}: {ex.Message}";
+                }
+                if (clipError is not null)
+                {
+                    yield return new ProgressEvent("error", Message: clipError);
+                    yield break;
+                }
                 clipPaths.Add(clipPath);
             }
 
@@ -101,9 +114,22 @@ public sealed class VideoExporterService : IVideoExporterService
             ), ct);
 
             var outputMp4 = Path.Combine(tmpDir, "output.mp4");
-            await RunFfmpegAsync(
-                $"-y -f concat -safe 0 -i \"{concatList}\" -c copy \"{outputMp4}\"",
-                ct);
+            string? concatError = null;
+            try
+            {
+                await RunFfmpegAsync(
+                    $"-y -f concat -safe 0 -i \"{concatList}\" -c copy \"{outputMp4}\"",
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                concatError = $"Failed to combine clips: {ex.Message}";
+            }
+            if (concatError is not null)
+            {
+                yield return new ProgressEvent("error", Message: concatError);
+                yield break;
+            }
 
             // ── 6. Return as base64 ─────────────────────────────────────────
             var mp4Bytes = await File.ReadAllBytesAsync(outputMp4, ct);
@@ -241,7 +267,7 @@ $ppt.Quit()
         // Step 2: PDF → PNGs via pdftoppm
         var pngPrefix = Path.Combine(outDir, "slide");
         await RunProcessAsync("pdftoppm",
-            $"-png -rx 192 -ry 192 \"{pdfPath}\" \"{pngPrefix}\"", ct);
+            $"-png -rx 96 -ry 96 \"{pdfPath}\" \"{pngPrefix}\"", ct);
 
         return Directory.GetFiles(outDir, "slide-*.png")
             .OrderBy(f => f)
@@ -255,20 +281,23 @@ $ppt.Quit()
     {
         if (audioPath is not null && File.Exists(audioPath))
         {
-            // Loop the PNG for the exact duration of the audio, then add 200ms silence pad at start
+            // Loop the PNG for the exact duration of the audio, then add 200ms silence pad at start.
+            // scale=trunc(iw/2)*2:trunc(ih/2)*2 ensures even dimensions required by libx264.
             await RunFfmpegAsync(
                 $"-y -loop 1 -i \"{pngPath}\" -i \"{audioPath}\" " +
-                $"-filter_complex \"[1:a]adelay=200|200[a]\" -map 0:v -map \"[a]\" " +
-                $"-c:v libx264 -preset ultrafast -tune stillimage -crf 18 " +
-                $"-c:a aac -b:a 192k -shortest -pix_fmt yuv420p \"{outPath}\"",
+                $"-filter_complex \"[0:v]scale=trunc(iw/2)*2:trunc(ih/2)*2[v];[1:a]adelay=200|200[a]\" -map \"[v]\" -map \"[a]\" " +
+                $"-c:v libx264 -preset ultrafast -tune stillimage -crf 23 -threads 0 " +
+                $"-c:a aac -b:a 128k -shortest -pix_fmt yuv420p \"{outPath}\"",
                 ct);
         }
         else
         {
-            // No audio — fixed 3-second still
+            // No audio — fixed 3-second still.
+            // scale=trunc(iw/2)*2:trunc(ih/2)*2 ensures even dimensions required by libx264.
             await RunFfmpegAsync(
                 $"-y -loop 1 -i \"{pngPath}\" -t {FallbackDurationS:F1} " +
-                $"-c:v libx264 -preset ultrafast -tune stillimage -crf 18 " +
+                $"-vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" " +
+                $"-c:v libx264 -preset ultrafast -tune stillimage -crf 23 -threads 0 " +
                 $"-an -pix_fmt yuv420p \"{outPath}\"",
                 ct);
         }
@@ -285,7 +314,9 @@ $ppt.Quit()
     {
         var psi = new System.Diagnostics.ProcessStartInfo(exe, args)
         {
-            RedirectStandardOutput = true,
+            // Do NOT redirect stdout — leaving it unread while redirected can deadlock
+            // if the child process fills the stdout pipe buffer.
+            RedirectStandardOutput = false,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -297,8 +328,10 @@ $ppt.Quit()
         using var proc = System.Diagnostics.Process.Start(psi)
             ?? throw new InvalidOperationException($"Failed to start {exe}");
 
-        var stderr = await proc.StandardError.ReadToEndAsync(ct);
+        // Read stderr concurrently with waiting; never await one blocking the other.
+        var stderrTask = proc.StandardError.ReadToEndAsync(ct);
         await proc.WaitForExitAsync(ct);
+        var stderr = await stderrTask;
 
         if (proc.ExitCode != 0)
             throw new InvalidOperationException(

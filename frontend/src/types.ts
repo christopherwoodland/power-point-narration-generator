@@ -22,6 +22,7 @@ export interface AppConfig {
   enable_ai_mode: boolean;
   enable_video_export: boolean;
   banner_message: string;
+  tts_mode: string;
 }
 
 export interface ProgressEvent {

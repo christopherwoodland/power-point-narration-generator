@@ -21,13 +21,26 @@ public class AppOptions
         "https://bhs-development-public-foundry-r.cognitiveservices.azure.com";
 
     public string AzureOpenAiDeployment { get; set; } = "gpt-5.2";
-    public string AzureImageDeployment { get; set; } = "gpt-image-1.5";
+
+    /// <summary>Endpoint for image generation. If set, uses the MAI (/mai/v1/) API. Env: AZURE_IMAGE_ENDPOINT</summary>
+    public string AzureImageEndpoint { get; set; } = "";
+    public string AzureImageDeployment { get; set; } = "MAI-Image-2e";
     public string ChatApiVersion { get; set; } = "2025-01-01-preview";
     public string ImageApiVersion { get; set; } = "2024-02-01";
 
     // ── Azure Speech ────────────────────────────────────────────────────────
     public string AzureSpeechResourceName { get; set; } = "bhs-development-public-foundry-r";
     public string AzureSpeechRegion { get; set; } = "eastus2";
+
+    /// <summary>
+    /// "standard" = regional Speech Service (default).
+    /// "mai" = Azure AI Foundry MAI-Voice-1 endpoint.
+    /// Env: AZURE_TTS_MODE
+    /// </summary>
+    public string AzureTtsMode { get; set; } = "standard";
+
+    /// <summary>Base URL of the Foundry resource for MAI Voice. Env: AZURE_VOICE_ENDPOINT</summary>
+    public string AzureVoiceEndpoint { get; set; } = "";
 
     // ── Azure Document Intelligence ─────────────────────────────────────────
     public string AzureDocIntelEndpoint { get; set; } =

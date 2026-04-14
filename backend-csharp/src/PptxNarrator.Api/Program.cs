@@ -14,12 +14,18 @@ builder.Services.Configure<AppOptions>(opts =>
         ?? opts.AzureOpenAiEndpoint;
     opts.AzureOpenAiDeployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT"]
         ?? opts.AzureOpenAiDeployment;
+    opts.AzureImageEndpoint = builder.Configuration["AZURE_IMAGE_ENDPOINT"]
+        ?? opts.AzureImageEndpoint;
     opts.AzureImageDeployment = builder.Configuration["AZURE_IMAGE_DEPLOYMENT"]
         ?? opts.AzureImageDeployment;
     opts.AzureSpeechResourceName = builder.Configuration["AZURE_SPEECH_RESOURCE_NAME"]
         ?? opts.AzureSpeechResourceName;
     opts.AzureSpeechRegion = builder.Configuration["AZURE_SPEECH_REGION"]
         ?? opts.AzureSpeechRegion;
+    opts.AzureTtsMode = builder.Configuration["AZURE_TTS_MODE"]
+        ?? opts.AzureTtsMode;
+    opts.AzureVoiceEndpoint = builder.Configuration["AZURE_VOICE_ENDPOINT"]
+        ?? opts.AzureVoiceEndpoint;
     opts.AzureDocIntelEndpoint = builder.Configuration["AZURE_DOC_INTEL_ENDPOINT"]
         ?? opts.AzureDocIntelEndpoint;
     opts.AppBannerMessage = builder.Configuration["APP_BANNER_MESSAGE"] ?? "";
