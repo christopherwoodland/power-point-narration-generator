@@ -526,3 +526,32 @@ Ensure `ffmpeg` is installed and on your PATH. On Windows, PowerPoint must be in
 
 **AI mode fails**
 Set `AZURE_OPENAI_ENDPOINT` and confirm your deployment names match `AZURE_OPENAI_DEPLOYMENT` (default `gpt-4o`) and `AZURE_IMAGE_DEPLOYMENT` (default `dall-e-3`).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the pull-request workflow, coding conventions, and how to run tests locally.
+
+This project requires contributors to sign a [Contributor License Agreement (CLA)](https://cla.opensource.microsoft.com) before merging pull requests.
+
+---
+
+## Code of Conduct
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) for more information.
+
+---
+
+## Security
+
+To report a security vulnerability, please follow the responsible disclosure process described in [SECURITY.md](SECURITY.md) — do **not** open a public GitHub issue.
+
+---
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the [MIT](LICENSE) license.
