@@ -33,6 +33,14 @@ param enableAiMode bool = true
 @description('Enable video export feature')
 param enableVideoExport bool = true
 
+@description('Whether backend ingress is publicly accessible')
+param backendExternalIngress bool = true
+
+@description('Allowed CORS origins for backend ingress')
+param backendCorsAllowedOrigins array = [
+  '*'
+]
+
 // ── Azure service parameters ─────────────────────────────────────────────────
 @description('Azure Cognitive Services / AI Foundry resource name used for Speech/OpenAI')
 param azureSpeechResourceName string = 'bhs-development-public-foundry-r'
@@ -75,6 +83,8 @@ module backendApp 'modules/container-app-backend.bicep' = {
     enableQualityCheck: enableQualityCheck
     enableAiMode: enableAiMode
     enableVideoExport: enableVideoExport
+    backendExternalIngress: backendExternalIngress
+    backendCorsAllowedOrigins: backendCorsAllowedOrigins
     azureSpeechResourceName: azureSpeechResourceName
     azureSpeechRegion: azureSpeechRegion
     azureOpenAiEndpoint: azureOpenAiEndpoint

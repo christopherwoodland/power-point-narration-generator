@@ -1,0 +1,239 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "9129962556587507040"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "environmentName": {
+      "type": "string"
+    },
+    "containerAppsEnvironmentId": {
+      "type": "string"
+    },
+    "containerRegistryName": {
+      "type": "string"
+    },
+    "backendImage": {
+      "type": "string"
+    },
+    "enableQualityCheck": {
+      "type": "bool"
+    },
+    "enableAiMode": {
+      "type": "bool"
+    },
+    "enableVideoExport": {
+      "type": "bool"
+    },
+    "backendExternalIngress": {
+      "type": "bool"
+    },
+    "backendCorsAllowedOrigins": {
+      "type": "array"
+    },
+    "azureSpeechResourceName": {
+      "type": "string"
+    },
+    "azureSpeechRegion": {
+      "type": "string"
+    },
+    "azureOpenAiEndpoint": {
+      "type": "string"
+    },
+    "azureOpenAiDeployment": {
+      "type": "string"
+    },
+    "azureImageDeployment": {
+      "type": "string"
+    },
+    "azureDocIntelEndpoint": {
+      "type": "string"
+    },
+    "appBannerMessage": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "prefix": "[format('narrator-{0}', parameters('environmentName'))]",
+    "appName": "[format('{0}-backend', variables('prefix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-id', variables('appName'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('containerRegistryName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('appName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[parameters('containerAppsEnvironmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": "[parameters('backendExternalIngress')]",
+            "targetPort": 8080,
+            "transport": "http",
+            "allowInsecure": false,
+            "corsPolicy": {
+              "allowedOrigins": "[parameters('backendCorsAllowedOrigins')]",
+              "allowedMethods": [
+                "GET",
+                "POST",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ]
+            }
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName')))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "backend",
+              "image": "[parameters('backendImage')]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ENABLE_QUALITY_CHECK",
+                  "value": "[string(parameters('enableQualityCheck'))]"
+                },
+                {
+                  "name": "ENABLE_AI_MODE",
+                  "value": "[string(parameters('enableAiMode'))]"
+                },
+                {
+                  "name": "ENABLE_VIDEO_EXPORT",
+                  "value": "[string(parameters('enableVideoExport'))]"
+                },
+                {
+                  "name": "AZURE_SPEECH_RESOURCE_NAME",
+                  "value": "[parameters('azureSpeechResourceName')]"
+                },
+                {
+                  "name": "AZURE_SPEECH_REGION",
+                  "value": "[parameters('azureSpeechRegion')]"
+                },
+                {
+                  "name": "AZURE_OPENAI_ENDPOINT",
+                  "value": "[parameters('azureOpenAiEndpoint')]"
+                },
+                {
+                  "name": "AZURE_OPENAI_DEPLOYMENT",
+                  "value": "[parameters('azureOpenAiDeployment')]"
+                },
+                {
+                  "name": "AZURE_IMAGE_DEPLOYMENT",
+                  "value": "[parameters('azureImageDeployment')]"
+                },
+                {
+                  "name": "AZURE_DOC_INTEL_ENDPOINT",
+                  "value": "[parameters('azureDocIntelEndpoint')]"
+                },
+                {
+                  "name": "APP_BANNER_MESSAGE",
+                  "value": "[parameters('appBannerMessage')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').clientId]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8080
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 30
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 5,
+            "rules": [
+              {
+                "name": "http-scale",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "20"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "fqdn": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('appName')), '2023-05-01').configuration.ingress.fqdn)]"
+    },
+    "identityClientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').clientId]"
+    },
+    "identityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').principalId]"
+    }
+  }
+}

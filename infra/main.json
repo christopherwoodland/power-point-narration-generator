@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "13181904188986847647"
+      "templateHash": "13143636148045444253"
     }
   },
   "parameters": {
@@ -61,6 +61,22 @@
       "defaultValue": true,
       "metadata": {
         "description": "Enable video export feature"
+      }
+    },
+    "backendExternalIngress": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether backend ingress is publicly accessible"
+      }
+    },
+    "backendCorsAllowedOrigins": {
+      "type": "array",
+      "defaultValue": [
+        "*"
+      ],
+      "metadata": {
+        "description": "Allowed CORS origins for backend ingress"
       }
     },
     "azureSpeechResourceName": {
@@ -233,6 +249,12 @@
           "enableVideoExport": {
             "value": "[parameters('enableVideoExport')]"
           },
+          "backendExternalIngress": {
+            "value": "[parameters('backendExternalIngress')]"
+          },
+          "backendCorsAllowedOrigins": {
+            "value": "[parameters('backendCorsAllowedOrigins')]"
+          },
           "azureSpeechResourceName": {
             "value": "[parameters('azureSpeechResourceName')]"
           },
@@ -262,7 +284,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "15472161986006656278"
+              "templateHash": "9129962556587507040"
             }
           },
           "parameters": {
@@ -289,6 +311,12 @@
             },
             "enableVideoExport": {
               "type": "bool"
+            },
+            "backendExternalIngress": {
+              "type": "bool"
+            },
+            "backendCorsAllowedOrigins": {
+              "type": "array"
             },
             "azureSpeechResourceName": {
               "type": "string"
@@ -352,14 +380,12 @@
                 "managedEnvironmentId": "[parameters('containerAppsEnvironmentId')]",
                 "configuration": {
                   "ingress": {
-                    "external": true,
+                    "external": "[parameters('backendExternalIngress')]",
                     "targetPort": 8080,
                     "transport": "http",
                     "allowInsecure": false,
                     "corsPolicy": {
-                      "allowedOrigins": [
-                        "*"
-                      ],
+                      "allowedOrigins": "[parameters('backendCorsAllowedOrigins')]",
                       "allowedMethods": [
                         "GET",
                         "POST",

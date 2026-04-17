@@ -26,6 +26,14 @@
     "enableVideoExport": {
       "value": true
     },
+    "backendExternalIngress": {
+      "value": true
+    },
+    "backendCorsAllowedOrigins": {
+      "value": [
+        "*"
+      ]
+    },
     "azureSpeechResourceName": {
       "value": "bhs-development-public-foundry-r"
     },

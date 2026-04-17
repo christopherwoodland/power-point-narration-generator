@@ -379,6 +379,8 @@ Update `infra/parameters.json` for your environment:
 - `azureOpenAiEndpoint`
 - `azureOpenAiDeployment`
 - `azureImageDeployment`
+- `backendExternalIngress` (set `false` to make backend internal-only)
+- `backendCorsAllowedOrigins` (set explicit origins instead of `*`)
 - Optional: `azureDocIntelEndpoint`, `appBannerMessage`
 
 The deployment script injects `containerRegistryName`, `backendImage`, and `frontendImage` automatically.
@@ -455,6 +457,7 @@ Then verify:
 ### Production hardening recommendations
 
 - Restrict backend CORS to your frontend domain(s) instead of `*`.
+- Set `backendExternalIngress=false` in `infra/parameters.json` if backend should not be publicly reachable.
 - Add custom domains + TLS certificates for frontend/backend ingress.
 - Put Azure Front Door or Application Gateway (WAF) in front of public ingress.
 - Send diagnostics to Application Insights and keep Log Analytics retention aligned to policy.

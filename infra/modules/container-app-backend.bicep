@@ -12,6 +12,8 @@ param backendImage string
 param enableQualityCheck bool
 param enableAiMode bool
 param enableVideoExport bool
+param backendExternalIngress bool
+param backendCorsAllowedOrigins array
 
 // Azure service config
 param azureSpeechResourceName string
@@ -61,12 +63,12 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
     managedEnvironmentId: containerAppsEnvironmentId
     configuration: {
       ingress: {
-        external: true
+        external: backendExternalIngress
         targetPort: 8080
         transport: 'http'
         allowInsecure: false
         corsPolicy: {
-          allowedOrigins: ['*']
+          allowedOrigins: backendCorsAllowedOrigins
           allowedMethods: ['GET', 'POST', 'OPTIONS']
           allowedHeaders: ['*']
         }
