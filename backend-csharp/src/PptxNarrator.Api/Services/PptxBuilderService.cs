@@ -5,7 +5,7 @@ namespace PptxNarrator.Api.Services;
 
 /// <summary>
 /// Embeds per-slide MP3 audio into a PowerPoint (.pptx) file using direct ZIP/OPC manipulation.
-/// Mirrors the Python pptx_builder.py implementation exactly:
+/// Implementation steps:
 ///   1. Adds MP3 + icon PNG as OPC parts.
 ///   2. Inserts relationships in each slide's .rels file.
 ///   3. Inserts &lt;p:pic&gt; audio shape into the slide XML.
@@ -200,7 +200,7 @@ public sealed class PptxBuilderService : IPptxBuilderService
     }
 
     // Build the <p:timing> element that auto-plays the audio shape on slide entry.
-    // Matches the Python _TIMING_XML_TMPL exactly, including prevCondLst, nextCondLst, and p:audio.
+    // Includes prevCondLst, nextCondLst, and p:audio nodes required for autoplay behavior.
     private static XElement BuildTimingXml(XNamespace pNs, string sid)
     {
         var xml = $@"<p:timing xmlns:p=""http://schemas.openxmlformats.org/presentationml/2006/main""><p:tnLst><p:par><p:cTn id=""1"" dur=""indefinite"" restart=""never"" nodeType=""tmRoot""><p:childTnLst><p:seq concurrent=""1"" nextAc=""seek""><p:cTn id=""2"" dur=""indefinite"" nodeType=""mainSeq""><p:childTnLst><p:par><p:cTn id=""3"" fill=""hold""><p:stCondLst><p:cond delay=""0""/></p:stCondLst><p:childTnLst><p:par><p:cTn id=""4"" fill=""hold""><p:stCondLst><p:cond delay=""0""/></p:stCondLst><p:childTnLst><p:par><p:cTn id=""5"" presetID=""1"" presetClass=""mediacall"" presetSubtype=""0"" fill=""hold"" nodeType=""withEffect""><p:stCondLst><p:cond delay=""0""/></p:stCondLst><p:childTnLst><p:cmd type=""call"" cmd=""playFrom(0.0)""><p:cBhvr><p:cTn id=""6"" dur=""indefinite"" fill=""hold""/><p:tgtEl><p:spTgt spid=""{sid}""/></p:tgtEl></p:cBhvr></p:cmd></p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn><p:prevCondLst><p:cond evt=""onPrev"" delay=""0""><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst><p:nextCondLst><p:cond evt=""onNext"" delay=""0""><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq><p:audio><p:cMediaNode vol=""80000""><p:cTn id=""7"" fill=""hold"" display=""0""><p:stCondLst><p:cond delay=""indefinite""/></p:stCondLst><p:endCondLst><p:cond evt=""onStopAudio"" delay=""0""><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:endCondLst></p:cTn><p:tgtEl><p:spTgt spid=""{sid}""/></p:tgtEl></p:cMediaNode></p:audio></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>";
