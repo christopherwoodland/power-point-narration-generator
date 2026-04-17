@@ -43,7 +43,10 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(registry.id, identity.id, 'acrpull')
   scope: registry
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    ) // AcrPull
     principalId: identity.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -90,20 +93,20 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             memory: '1Gi'
           }
           env: [
-            { name: 'ASPNETCORE_ENVIRONMENT',        value: 'Production' }
-            { name: 'ASPNETCORE_URLS',                value: 'http://+:8080' }
-            { name: 'ENABLE_QUALITY_CHECK',           value: string(enableQualityCheck) }
-            { name: 'ENABLE_AI_MODE',                 value: string(enableAiMode) }
-            { name: 'ENABLE_VIDEO_EXPORT',            value: string(enableVideoExport) }
-            { name: 'AZURE_SPEECH_RESOURCE_NAME',     value: azureSpeechResourceName }
-            { name: 'AZURE_SPEECH_REGION',            value: azureSpeechRegion }
-            { name: 'AZURE_OPENAI_ENDPOINT',          value: azureOpenAiEndpoint }
-            { name: 'AZURE_OPENAI_DEPLOYMENT',        value: azureOpenAiDeployment }
-            { name: 'AZURE_IMAGE_DEPLOYMENT',         value: azureImageDeployment }
-            { name: 'AZURE_DOC_INTEL_ENDPOINT',       value: azureDocIntelEndpoint }
-            { name: 'APP_BANNER_MESSAGE',             value: appBannerMessage }
+            { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
+            { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
+            { name: 'ENABLE_QUALITY_CHECK', value: string(enableQualityCheck) }
+            { name: 'ENABLE_AI_MODE', value: string(enableAiMode) }
+            { name: 'ENABLE_VIDEO_EXPORT', value: string(enableVideoExport) }
+            { name: 'AZURE_SPEECH_RESOURCE_NAME', value: azureSpeechResourceName }
+            { name: 'AZURE_SPEECH_REGION', value: azureSpeechRegion }
+            { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
+            { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
+            { name: 'AZURE_IMAGE_DEPLOYMENT', value: azureImageDeployment }
+            { name: 'AZURE_DOC_INTEL_ENDPOINT', value: azureDocIntelEndpoint }
+            { name: 'APP_BANNER_MESSAGE', value: appBannerMessage }
             // Tell the C# app which managed identity client ID to use
-            { name: 'AZURE_CLIENT_ID',                value: identity.properties.clientId }
+            { name: 'AZURE_CLIENT_ID', value: identity.properties.clientId }
           ]
           probes: [
             {
