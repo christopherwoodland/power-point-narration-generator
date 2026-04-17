@@ -324,32 +324,149 @@ Covers:
 
 ---
 
-## Deployment to Azure
+## Deployment to Azure Container Apps (Production)
 
-### Prerequisites
+### Azure services required
 
-- An Azure resource group
-- An Azure Container Registry (ACR)
-- `az login` with Contributor access
+The app runs as two Azure Container Apps (frontend + backend) and uses managed identity only (no API keys).
 
-### Deploy
+| Service | Required | Purpose |
+|--------|----------|---------|
+| Resource Group | Yes | Deployment scope for all resources |
+| Azure Container Registry (ACR) | Yes | Stores frontend/backend container images |
+| Azure Container Apps Environment | Yes (created by Bicep) | Shared runtime environment for both apps |
+| Log Analytics Workspace | Yes (created by Bicep) | Container Apps logs and diagnostics |
+| Azure Container App (backend) | Yes (created by Bicep) | ASP.NET Core API workload |
+| Azure Container App (frontend) | Yes (created by Bicep) | React + Nginx UI workload |
+| User-assigned Managed Identities | Yes (created by Bicep) | Backend/frontend identity and ACR pull auth |
+| Azure AI / Cognitive Services resource | Yes | Speech TTS/STT and OpenAI endpoint access |
+| Azure OpenAI deployments | If AI mode enabled | Chat + image generation (for Step 3 AI mode) |
+| Azure Document Intelligence | Optional | Better PPTX text extraction for sparse slides |
+| Application Insights | Optional | Application telemetry |
+
+### Azure roles required
+
+- Deployer identity: Contributor on the target resource group (and permission to push to ACR).
+- Backend managed identity: at minimum Cognitive Services User on your Azure AI/Cognitive Services resource.
+- Backend managed identity: if OpenAI calls return 403 in your tenant, also assign Cognitive Services OpenAI User.
+
+Note: AcrPull role assignments for frontend/backend managed identities are created automatically by the Bicep modules.
+
+### 1. One-time setup
+
+Sign in and select the tenant/subscription:
 
 ```powershell
-.\scripts\deploy.ps1 -ResourceGroup my-rg -AcrName myacr
+az login --tenant 16b3c013-d300-468d-ac64-7eda0820b6d3
+az account set --subscription <your-subscription-id-or-name>
 ```
 
-Use ACR cloud build (no local Docker required):
+Create the resource group and ACR if needed:
 
 ```powershell
-.\scripts\deploy.ps1 -ResourceGroup my-rg -AcrName myacr -UseAcrBuild
+az group create -n <rg-name> -l eastus2
+az acr create -g <rg-name> -n <acr-name> --sku Standard
 ```
 
-This will:
-1. Build and push both Docker images to ACR
-2. Deploy `infra/main.bicep` via `az deployment group create`
-3. Provision Azure Container Apps environment, backend app, and frontend app
+### 2. Configure IaC parameters
 
-IaC parameters can be customised in `infra/parameters.json`.
+Update `infra/parameters.json` for your environment:
+
+- `location`
+- `environmentName` (for example: `prod`)
+- `azureSpeechResourceName`
+- `azureSpeechRegion`
+- `azureOpenAiEndpoint`
+- `azureOpenAiDeployment`
+- `azureImageDeployment`
+- Optional: `azureDocIntelEndpoint`, `appBannerMessage`
+
+The deployment script injects `containerRegistryName`, `backendImage`, and `frontendImage` automatically.
+
+### 3. Deploy
+
+Local Docker build + push:
+
+```powershell
+.\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name>
+```
+
+ACR cloud build (no local Docker required):
+
+```powershell
+.\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -UseAcrBuild
+```
+
+The script will:
+1. Build and push both images to ACR.
+2. Deploy `infra/main.bicep` with image references.
+3. Provision Container Apps environment, frontend app, backend app, and managed identities.
+
+### 4. Post-deploy configuration behavior
+
+`scripts/deploy.ps1` now automates the two critical post-deploy steps:
+
+1. Sets frontend `BACKEND_URL` to the deployed backend URL.
+2. Attempts to assign `Cognitive Services User` to the backend managed identity.
+
+If your Azure AI/Cognitive Services account is in a different resource group or has a different name than `infra/parameters.json`, pass these optional parameters:
+
+```powershell
+.\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -AiResourceGroup <ai-rg> -AiResourceName <ai-resource-name>
+```
+
+If your deployer identity cannot create role assignments (`Microsoft.Authorization/roleAssignments/write`), the script will warn and continue. In that case, assign roles manually:
+
+```powershell
+$backendPrincipalId = az identity show `
+  --resource-group <rg-name> `
+  --name narrator-<environmentName>-backend-id `
+  --query principalId -o tsv
+
+az role assignment create `
+  --assignee-object-id $backendPrincipalId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Cognitive Services User" `
+  --scope /subscriptions/<sub-id>/resourceGroups/<ai-rg>/providers/Microsoft.CognitiveServices/accounts/<ai-resource-name>
+```
+
+Optional fallback for stricter OpenAI RBAC:
+
+```powershell
+az role assignment create `
+  --assignee-object-id $backendPrincipalId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Cognitive Services OpenAI User" `
+  --scope /subscriptions/<sub-id>/resourceGroups/<ai-rg>/providers/Microsoft.CognitiveServices/accounts/<ai-resource-name>
+```
+
+### 5. Validate production deployment
+
+```powershell
+az containerapp show -g <rg-name> -n narrator-<environmentName>-frontend --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show -g <rg-name> -n narrator-<environmentName>-backend --query properties.configuration.ingress.fqdn -o tsv
+```
+
+Then verify:
+- Frontend URL loads the wizard.
+- Backend health endpoint returns OK: `https://<backend-fqdn>/healthz`
+- Generate flow succeeds (including AI mode if enabled).
+
+### Production hardening recommendations
+
+- Restrict backend CORS to your frontend domain(s) instead of `*`.
+- Add custom domains + TLS certificates for frontend/backend ingress.
+- Put Azure Front Door or Application Gateway (WAF) in front of public ingress.
+- Send diagnostics to Application Insights and keep Log Analytics retention aligned to policy.
+- Consider private networking for Azure AI resources if your org requires no public endpoints.
+
+### Additional production checks
+
+- Ensure backend and frontend images are pinned to immutable tags (avoid relying only on `latest`).
+- Decide whether `ENABLE_VIDEO_EXPORT=true` is appropriate for Linux Container Apps (PowerPoint COM is Windows-only).
+- Verify `azureSpeechResourceName`/`azureOpenAiEndpoint` point to the correct production Azure AI account.
+- Confirm scale settings in Bicep (`minReplicas`, `maxReplicas`, `concurrentRequests`) match your expected traffic.
+- Restrict backend ingress/CORS and consider internal-only backend ingress behind Front Door/App Gateway.
 
 ---
 

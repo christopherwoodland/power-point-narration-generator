@@ -7,6 +7,7 @@ param environmentName string
 param containerAppsEnvironmentId string
 param containerRegistryName string
 param frontendImage string
+param backendUrl string
 
 var prefix = 'narrator-${environmentName}'
 var appName = '${prefix}-frontend'
@@ -24,7 +25,10 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(registry.id, identity.id, 'acrpull-frontend')
   scope: registry
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    ) // AcrPull
     principalId: identity.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -64,6 +68,12 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
+          env: [
+            {
+              name: 'BACKEND_URL'
+              value: backendUrl
+            }
+          ]
         }
       ]
       scale: {

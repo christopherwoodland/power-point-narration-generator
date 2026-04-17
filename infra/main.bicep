@@ -93,9 +93,12 @@ module frontendApp 'modules/container-app-frontend.bicep' = {
     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
     containerRegistryName: containerRegistryName
     frontendImage: frontendImage
+    backendUrl: backendApp.outputs.fqdn
   }
 }
 
 // ── Outputs ───────────────────────────────────────────────────────────────────
 output backendUrl string = backendApp.outputs.fqdn
 output frontendUrl string = frontendApp.outputs.fqdn
+output backendIdentityPrincipalId string = backendApp.outputs.identityPrincipalId
+output backendIdentityClientId string = backendApp.outputs.identityClientId

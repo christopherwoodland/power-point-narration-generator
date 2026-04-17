@@ -24,6 +24,17 @@
     When set, use 'az acr build' (cloud build, no local Docker required).
     Defaults to local Docker build.
 
+.PARAMETER AiResourceName
+    Optional Azure AI / Cognitive Services account name for backend role assignment.
+    If omitted, uses azureSpeechResourceName from infra/parameters.json.
+
+.PARAMETER AiResourceGroup
+    Optional resource group containing the Azure AI / Cognitive Services account.
+    Defaults to -ResourceGroup.
+
+.PARAMETER SkipRoleAssignment
+    Skip automatic assignment of the backend managed identity role on Azure AI/Cognitive Services.
+
 .EXAMPLE
     .\deploy.ps1 -ResourceGroup my-rg -AcrName myacr
 
@@ -37,18 +48,21 @@ param(
     [Parameter(Mandatory)]
     [string] $AcrName,
 
-    [string] $Tag          = (Get-Date -Format "yyyyMMdd-HHmmss"),
-    [switch] $UseAcrBuild
+    [string] $Tag = (Get-Date -Format "yyyyMMdd-HHmmss"),
+    [switch] $UseAcrBuild,
+    [string] $AiResourceName = "",
+    [string] $AiResourceGroup = "",
+    [switch] $SkipRoleAssignment
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Resolve repo root (parent of the scripts/ folder this script lives in)
-$Root     = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $AcrLogin = "$AcrName.azurecr.io"
 
-$BackendImage  = "$AcrLogin/narrator-backend:$Tag"
+$BackendImage = "$AcrLogin/narrator-backend:$Tag"
 $FrontendImage = "$AcrLogin/narrator-frontend:$Tag"
 
 function Write-Step([int]$n, [string]$msg) {
@@ -76,6 +90,30 @@ Write-Host "  Backend Image  : $BackendImage"
 Write-Host "  Frontend Image : $FrontendImage"
 Write-Host "  Bicep template : infra/main.bicep"
 
+$paramFile = Join-Path $Root "infra\parameters.json"
+if (-not (Test-Path $paramFile)) {
+    Write-Error "Parameter file not found: $paramFile"
+    exit 1
+}
+
+$paramJson = Get-Content $paramFile -Raw | ConvertFrom-Json
+$environmentName = $paramJson.parameters.environmentName.value
+if ([string]::IsNullOrWhiteSpace($environmentName)) { $environmentName = "prod" }
+
+$resolvedAiResourceName = if ([string]::IsNullOrWhiteSpace($AiResourceName)) {
+    $paramJson.parameters.azureSpeechResourceName.value
+}
+else {
+    $AiResourceName
+}
+
+$resolvedAiResourceGroup = if ([string]::IsNullOrWhiteSpace($AiResourceGroup)) {
+    $ResourceGroup
+}
+else {
+    $AiResourceGroup
+}
+
 # ── Build & push backend ──────────────────────────────────────────────────────
 Write-Step 1 "Build + push backend image"
 
@@ -85,8 +123,9 @@ if ($UseAcrBuild) {
         --image "narrator-backend:$Tag" `
         --image "narrator-backend:latest" `
         --file (Join-Path $Root "backend-csharp\Dockerfile") `
-        (Join-Path $Root "backend-csharp")
-} else {
+    (Join-Path $Root "backend-csharp")
+}
+else {
     az acr login --name $AcrName
     docker build -t $BackendImage -t "$AcrLogin/narrator-backend:latest" `
         -f (Join-Path $Root "backend-csharp\Dockerfile") (Join-Path $Root "backend-csharp")
@@ -104,8 +143,9 @@ if ($UseAcrBuild) {
         --image "narrator-frontend:$Tag" `
         --image "narrator-frontend:latest" `
         --file (Join-Path $Root "frontend\Dockerfile") `
-        (Join-Path $Root "frontend")
-} else {
+    (Join-Path $Root "frontend")
+}
+else {
     docker build -t $FrontendImage -t "$AcrLogin/narrator-frontend:latest" `
         -f (Join-Path $Root "frontend\Dockerfile") (Join-Path $Root "frontend")
     docker push $FrontendImage
@@ -116,35 +156,97 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Frontend build/push failed."; exit 1 }
 # ── Bicep deployment ──────────────────────────────────────────────────────────
 Write-Step 3 "Deploy Bicep template (infra/main.bicep)"
 
-$paramFile = Join-Path $Root "infra\parameters.json"
-
-az deployment group create `
+$deployment = az deployment group create `
     --resource-group $ResourceGroup `
     --template-file (Join-Path $Root "infra\main.bicep") `
     --parameters "@$paramFile" `
     --parameters containerRegistryName=$AcrName `
-                 backendImage=$BackendImage `
-                 frontendImage=$FrontendImage `
-    --output json | ConvertFrom-Json | ForEach-Object {
-        $outputs = $_.properties.outputs
-        if ($outputs) {
-            Write-Host ""
-            Write-Host "  Deployment outputs:" -ForegroundColor Green
-            Write-Host "    Backend  → $($outputs.backendUrl.value)"  -ForegroundColor Green
-            Write-Host "    Frontend → $($outputs.frontendUrl.value)" -ForegroundColor Green
-        }
-    }
+    backendImage=$BackendImage `
+    frontendImage=$FrontendImage `
+    --output json | ConvertFrom-Json
 
 if ($LASTEXITCODE -ne 0) { Write-Error "Bicep deployment failed."; exit 1 }
 
+$outputs = $deployment.properties.outputs
+if ($outputs) {
+    Write-Host ""
+    Write-Host "  Deployment outputs:" -ForegroundColor Green
+    Write-Host "    Backend  → $($outputs.backendUrl.value)" -ForegroundColor Green
+    Write-Host "    Frontend → $($outputs.frontendUrl.value)" -ForegroundColor Green
+}
+
+# Keep frontend BACKEND_URL in sync even when updating an existing environment.
+Write-Step 4 "Ensure frontend BACKEND_URL is configured"
+
+$backendUrl = $outputs.backendUrl.value
+$frontendAppName = "narrator-$environmentName-frontend"
+if (-not [string]::IsNullOrWhiteSpace($backendUrl)) {
+    az containerapp update `
+        --resource-group $ResourceGroup `
+        --name $frontendAppName `
+        --set-env-vars "BACKEND_URL=$backendUrl" `
+        --only-show-errors | Out-Null
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  BACKEND_URL updated on $frontendAppName" -ForegroundColor Green
+    }
+    else {
+        Write-Warning "Failed to update BACKEND_URL on $frontendAppName."
+    }
+}
+else {
+    Write-Warning "Backend URL not found in deployment outputs; skipped BACKEND_URL update."
+}
+
+# Assign backend managed identity role for Azure AI/Cognitive Services access.
+if (-not $SkipRoleAssignment) {
+    Write-Step 5 "Assign backend identity role on Azure AI/Cognitive Services"
+
+    $backendPrincipalId = $outputs.backendIdentityPrincipalId.value
+    if ([string]::IsNullOrWhiteSpace($backendPrincipalId)) {
+        Write-Warning "Backend identity principal ID not found in outputs; skipped role assignment."
+    }
+    elseif ([string]::IsNullOrWhiteSpace($resolvedAiResourceName)) {
+        Write-Warning "Azure AI resource name is empty; skipped role assignment."
+    }
+    else {
+        $aiScope = az cognitiveservices account show `
+            --resource-group $resolvedAiResourceGroup `
+            --name $resolvedAiResourceName `
+            --query id -o tsv 2>$null
+
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($aiScope)) {
+            Write-Warning "Could not resolve Azure AI resource scope for '$resolvedAiResourceName' in '$resolvedAiResourceGroup'."
+        }
+        else {
+            $existingRoleId = az role assignment list `
+                --assignee-object-id $backendPrincipalId `
+                --scope $aiScope `
+                --role "Cognitive Services User" `
+                --query "[0].id" -o tsv
+
+            if ([string]::IsNullOrWhiteSpace($existingRoleId)) {
+                az role assignment create `
+                    --assignee-object-id $backendPrincipalId `
+                    --assignee-principal-type ServicePrincipal `
+                    --role "Cognitive Services User" `
+                    --scope $aiScope `
+                    --only-show-errors | Out-Null
+
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  Assigned 'Cognitive Services User' to backend managed identity." -ForegroundColor Green
+                }
+                else {
+                    Write-Warning "Automatic role assignment failed. Ensure deployer has roleAssignments/write (Owner or User Access Administrator)."
+                }
+            }
+            else {
+                Write-Host "  Backend identity already has 'Cognitive Services User' on Azure AI resource." -ForegroundColor Green
+            }
+        }
+    }
+}
+
 Write-Host ""
 Write-Host "  Deployment complete." -ForegroundColor Green
-Write-Host ""
-Write-Host "  NOTE: The backend Managed Identity needs 'Cognitive Services User' on the AI Foundry" -ForegroundColor Yellow
-Write-Host "  resource to call Speech TTS/STT and OpenAI. Assign it once:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "    az role assignment create \\" -ForegroundColor DarkYellow
-Write-Host "      --assignee <BACKEND_IDENTITY_PRINCIPAL_ID> \\" -ForegroundColor DarkYellow
-Write-Host "      --role 'Cognitive Services User' \\" -ForegroundColor DarkYellow
-Write-Host "      --scope /subscriptions/{subId}/resourceGroups/{rg}/providers/Microsoft.CognitiveServices/accounts/bhs-development-public-foundry-r" -ForegroundColor DarkYellow
-Write-Host ""
+
