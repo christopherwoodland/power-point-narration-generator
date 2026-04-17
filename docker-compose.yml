@@ -13,6 +13,9 @@ services:
       ENABLE_QUALITY_CHECK: "${ENABLE_QUALITY_CHECK:-false}"
       ENABLE_AI_MODE: "${ENABLE_AI_MODE:-false}"
       ENABLE_VIDEO_EXPORT: "${ENABLE_VIDEO_EXPORT:-false}"
+      # CORS — comma-separated list of allowed origins. '*' allows all (dev only).
+      # In production set to your frontend URL, e.g. https://my-app.azurecontainerapps.io
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-*}"
       # Azure settings – override via .env file or shell
       AZURE_SPEECH_RESOURCE_NAME: "${AZURE_SPEECH_RESOURCE_NAME:-bhs-development-public-foundry-r}"
       AZURE_SPEECH_REGION: "${AZURE_SPEECH_REGION:-eastus2}"

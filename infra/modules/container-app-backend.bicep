@@ -23,6 +23,7 @@ param azureOpenAiDeployment string
 param azureImageDeployment string
 param azureDocIntelEndpoint string
 param appBannerMessage string
+param corsAllowedOrigins array = ['*']
 
 var prefix = 'narrator-${environmentName}'
 var appName = '${prefix}-backend'
@@ -98,6 +99,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'ENABLE_QUALITY_CHECK', value: string(enableQualityCheck) }
             { name: 'ENABLE_AI_MODE', value: string(enableAiMode) }
             { name: 'ENABLE_VIDEO_EXPORT', value: string(enableVideoExport) }
+            { name: 'CORS_ALLOWED_ORIGINS', value: join(corsAllowedOrigins, ',') }
             { name: 'AZURE_SPEECH_RESOURCE_NAME', value: azureSpeechResourceName }
             { name: 'AZURE_SPEECH_REGION', value: azureSpeechRegion }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }

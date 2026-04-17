@@ -85,6 +85,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
     enableVideoExport: enableVideoExport
     backendExternalIngress: backendExternalIngress
     backendCorsAllowedOrigins: backendCorsAllowedOrigins
+    corsAllowedOrigins: backendCorsAllowedOrigins
     azureSpeechResourceName: azureSpeechResourceName
     azureSpeechRegion: azureSpeechRegion
     azureOpenAiEndpoint: azureOpenAiEndpoint

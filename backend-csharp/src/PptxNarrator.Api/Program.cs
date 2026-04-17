@@ -82,8 +82,20 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "PptxNarrator API", Version = "v1" });
 });
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// CORS_ALLOWED_ORIGINS: comma-separated list of allowed origins.
+// Defaults to "*" (dev convenience). In production set this to the frontend URL.
+var corsOrigins = (builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? "*")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+{
+    if (corsOrigins is ["*"])
+        p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    else
+        p.WithOrigins(corsOrigins).AllowAnyMethod().AllowAnyHeader();
+}));
 
 var app = builder.Build();
 

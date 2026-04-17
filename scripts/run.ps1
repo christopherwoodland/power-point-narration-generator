@@ -7,10 +7,10 @@
     Launches both the C# ASP.NET Core backend and the Vite React frontend
     as concurrent background jobs, then streams their combined output.
 
-    Feature flags (default: all enabled):
-        $env:ENABLE_QUALITY_CHECK = "false"
-        $env:ENABLE_AI_MODE       = "false"
-        $env:ENABLE_VIDEO_EXPORT  = "false"
+    Feature flags (default: all disabled — set to "true" to enable):
+        $env:ENABLE_QUALITY_CHECK = "true"
+        $env:ENABLE_AI_MODE       = "true"
+        $env:ENABLE_VIDEO_EXPORT  = "true"
         .\run.ps1
 #>
 param(

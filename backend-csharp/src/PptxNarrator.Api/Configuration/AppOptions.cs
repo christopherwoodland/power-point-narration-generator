@@ -8,13 +8,13 @@ public class AppOptions
 {
     // ── Feature flags ───────────────────────────────────────────────────────
     /// <summary>Toggle the Quality Check step (Step 4). Env: ENABLE_QUALITY_CHECK</summary>
-    public bool EnableQualityCheck { get; set; } = true;
+    public bool EnableQualityCheck { get; set; } = false;
 
     /// <summary>Toggle AI presentation generation. Env: ENABLE_AI_MODE</summary>
-    public bool EnableAiMode { get; set; } = true;
+    public bool EnableAiMode { get; set; } = false;
 
     /// <summary>Toggle MP4 video export. Env: ENABLE_VIDEO_EXPORT</summary>
-    public bool EnableVideoExport { get; set; } = true;
+    public bool EnableVideoExport { get; set; } = false;
 
     // ── Azure OpenAI ────────────────────────────────────────────────────────
     public string AzureOpenAiEndpoint { get; set; } =

@@ -1,5 +1,8 @@
 # PowerPoint Narration Generator
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-microsoft-blue)](CODE_OF_CONDUCT.md)
+
 An internal tool that generates narrated PowerPoint presentations from Word or PPTX scripts using Azure AI services.
 Upload your script and an existing PowerPoint deck, map slides, and the tool synthesises natural-sounding narration audio per slide — embedding it directly into the PPTX file with auto-play on slide entry.
 

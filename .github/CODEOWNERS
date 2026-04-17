@@ -1,0 +1,12 @@
+# Default owners for everything in the repository
+* @christopherwoodland
+
+# Infrastructure changes require explicit review
+infra/ @christopherwoodland
+scripts/ @christopherwoodland
+
+# Backend API
+backend-csharp/ @christopherwoodland
+
+# Frontend
+frontend/ @christopherwoodland
