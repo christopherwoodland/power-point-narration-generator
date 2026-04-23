@@ -1,8 +1,9 @@
-# â”€â”€ Build stage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# —— Build stage ——————————————————————————————————————————————————————
 FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
+# Make sure node_modules/.bin is on PATH and executable
 RUN npm ci --prefer-offline
 
 COPY . .
@@ -11,9 +12,12 @@ COPY . .
 ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
+# Fix permissions for local bin if they were copied from host with restricted perms
+RUN chmod -R +x node_modules/.bin
+
 RUN npm run build
 
-# â”€â”€ Runtime stage (Nginx) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# —— Runtime stage (Nginx) —————————————————————————————————————————————
 FROM nginx:alpine AS runtime
 
 # gettext provides envsubst (needed to inject BACKEND_URL at runtime)
