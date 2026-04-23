@@ -192,36 +192,41 @@ AZURE_CLIENT_SECRET=<password from above>
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your values. All settings are optional unless noted:
+Copy `.env.example` to `.env` and fill in your values. The full set of supported environment variables is listed below — only the **Azure Speech** group is strictly required for the default flow; everything else is optional or has a sensible default.
 
-```env
-# ── Feature flags ──────────────────────────────────────────────────────────────
-ENABLE_QUALITY_CHECK=true       # Run STT quality check on generated audio
-ENABLE_AI_MODE=true             # AI slide generation (requires Azure OpenAI)
-ENABLE_VIDEO_EXPORT=true        # Export narrated PPTX to MP4 (requires ffmpeg)
+### Backend environment variables
 
-# ── Azure Speech (required) ────────────────────────────────────────────────────
-AZURE_SPEECH_RESOURCE_NAME=your-speech-resource-name
-AZURE_SPEECH_REGION=eastus2
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ENABLE_QUALITY_CHECK` | `false` | Toggle Step 4 (STT round-trip quality check). |
+| `ENABLE_AI_MODE` | `false` | Toggle AI slide generation (Step 1 AI mode). Requires Azure OpenAI. |
+| `ENABLE_VIDEO_EXPORT` | `false` | Toggle MP4 export. Requires `ffmpeg` (and PowerPoint COM on Windows / LibreOffice on Linux). |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed origins for the backend API. Set to your frontend URL in production. |
+| `AZURE_SPEECH_RESOURCE_NAME` | `bhs-development-public-foundry-r` | Cognitive Services / Foundry resource name used for TTS + STT. |
+| `AZURE_SPEECH_REGION` | `eastus2` | Region of the Speech resource. |
+| `AZURE_TTS_MODE` | `standard` | `standard` = regional Azure Speech; `mai` = Foundry MAI-Voice-1 endpoint. |
+| `AZURE_VOICE_ENDPOINT` | *(blank)* | Foundry resource base URL. Used only when `AZURE_TTS_MODE=mai`. |
+| `AZURE_OPENAI_ENDPOINT` | `https://bhs-development-public-foundry-r.cognitiveservices.azure.com` | Azure OpenAI / Foundry chat endpoint. Required for AI mode. |
+| `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.2` | Chat deployment name. |
+| `AZURE_IMAGE_ENDPOINT` | *(blank)* | Separate endpoint for image generation (MAI on `services.ai.azure.com`). |
+| `AZURE_IMAGE_DEPLOYMENT` | `MAI-Image-2e` | Image deployment name. |
+| `AZURE_DOC_INTEL_ENDPOINT` | `https://bhs-development-public-foundry-r.cognitiveservices.azure.com/` | Optional Document Intelligence endpoint for OCR fallback in PPTX parsing. Leave blank to skip. |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | *(blank)* | Enables Application Insights telemetry when set. App Insights is skipped when blank — no error. |
+| `APP_BANNER_MESSAGE` | *(blank)* | Optional banner text rendered at the top of the UI. |
+| `AZURE_TENANT_ID` | *(blank)* | Pins `DefaultAzureCredential` to a specific tenant. Recommended in multi-tenant environments. |
+| `AZURE_CLIENT_ID` | *(blank)* | **Local Docker only** — service principal client ID for `EnvironmentCredential`. Leave blank in ACA (uses Managed Identity). |
+| `AZURE_CLIENT_SECRET` | *(blank)* | **Local Docker only** — service principal secret. Leave blank in ACA. |
 
-# ── Azure OpenAI (required for AI mode) ───────────────────────────────────────
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-AZURE_IMAGE_DEPLOYMENT=dall-e-3
+### Frontend environment variables
 
-# ── Azure Translator (optional – enables voice-language matching) ──────────────
-AZURE_TRANSLATOR_ENDPOINT=https://api.cognitive.microsofttranslator.com/
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VITE_API_URL` | *(blank)* | Build-time API base URL baked into the Vite bundle. Leave blank for local dev (Vite proxy / Nginx forward `/api/*` to the backend). Set in CI/CD when building the production image, e.g. `https://narrator-prod-backend.<region>.azurecontainerapps.io`. |
+| `BACKEND_URL` | `http://backend:8080` | Runtime backend URL used by the Nginx container to proxy `/api/*`. Set automatically by `scripts/deploy.ps1` to the deployed backend FQDN. |
 
-# ── Azure Document Intelligence (optional – richer PPTX parsing) ──────────────
-AZURE_DOC_INTEL_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+> **Note on Azure Translator:** The Translator client reuses the Speech / Cognitive Services resource and does not require its own endpoint variable.
 
-# ── Application Insights (optional – structured telemetry) ───────────────────
-# Set this to enable telemetry. Leave blank to run without App Insights.
-APPLICATIONINSIGHTS_CONNECTION_STRING=
-
-# ── UI ─────────────────────────────────────────────────────────────────────────
-APP_BANNER_MESSAGE=Internal use only – not for external sharing
-```
+> **Note on `appsettings.json`:** All backend values can also be set under the `App:` section of `backend-csharp/src/PptxNarrator.Api/appsettings.json` (see `appsettings.example.json`). Environment variables always win over `appsettings.json`.
 
 ---
 
