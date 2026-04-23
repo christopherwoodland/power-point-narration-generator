@@ -1,6 +1,6 @@
 import type { WizardStep } from '../types';
 
-const STEPS = [
+const ALL_STEPS = [
   { num: 1 as WizardStep, label: 'Upload' },
   { num: 2 as WizardStep, label: 'Review' },
   { num: 3 as WizardStep, label: 'Generate' },
@@ -9,9 +9,11 @@ const STEPS = [
 
 interface Props {
   current: WizardStep;
+  showQualityCheck?: boolean;
 }
 
-export default function StepIndicator({ current }: Props) {
+export default function StepIndicator({ current, showQualityCheck = true }: Props) {
+  const STEPS = showQualityCheck ? ALL_STEPS : ALL_STEPS.filter(s => s.num !== 4);
   return (
     <nav className="step-indicator" aria-label="Wizard steps">
       <ol className="step-list">

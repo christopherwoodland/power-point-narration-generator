@@ -51,7 +51,7 @@ export default function App() {
         <div className="env-banner" role="status">{config.banner_message}</div>
       )}
       <Header />
-      <StepIndicator current={state.step} />
+      <StepIndicator current={state.step} showQualityCheck={config.enable_quality_check} />
 
       <main id="main-content" className="main-content">
         {state.step === 1 && (
