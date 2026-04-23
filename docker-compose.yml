@@ -30,6 +30,11 @@ services:
       # Local Docker dev: service principal credentials for DefaultAzureCredential.
       # Set AZURE_CLIENT_ID + AZURE_CLIENT_SECRET in a .env file (gitignored).
       # In production on Azure Container Apps, leave blank — Managed Identity is used.
+      #
+      # NOTE: in tenants that enforce a Conditional Access "compliant device"
+      # policy (e.g. Microsoft Non-Production), local Docker auth to Azure is
+      # NOT supported — use scripts/run.ps1 / scripts/run.sh on the host instead.
+      # See README "Running with Docker Compose" for the full explanation.
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
       AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET:-}"

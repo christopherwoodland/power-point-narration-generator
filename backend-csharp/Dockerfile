@@ -29,22 +29,22 @@ RUN groupadd --system --gid 1001 appgroup \
 # azure-cli is required by DefaultAzureCredential (AzureCliCredential) for local dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl apt-transport-https gnupg lsb-release ffmpeg \
-       libreoffice-impress libreoffice-calc libreoffice-writer poppler-utils \
+    libreoffice-impress libreoffice-calc libreoffice-writer poppler-utils \
     && curl -sLS https://packages.microsoft.com/keys/microsoft.asc \
-       | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
+    | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
     && echo "deb [arch=$(dpkg --print-architecture)] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
-       > /etc/apt/sources.list.d/azure-cli.list \
+    > /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends azure-cli \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app .
-COPY entrypoint.sh /entrypoint.sh
 
-# Create writable azure-config dir; the entrypoint copies read-only host
-# credentials from /azure-config-ro into /azure-config at container start.
-RUN chmod +x /entrypoint.sh \
-    && mkdir -p /azure-config \
+# Writable AZURE_CONFIG_DIR so any in-container `az` invocation (e.g. for
+# debugging) has a place to write. Local Docker auth to Azure is generally
+# not supported on CA-restricted tenants — see README "Running with Docker
+# Compose". Use scripts/run.ps1 / run.sh on the host for local dev.
+RUN mkdir -p /azure-config \
     && chown -R appuser:appgroup /app /azure-config
 USER appuser
 
@@ -55,4 +55,4 @@ ENV AZURE_CONFIG_DIR=/azure-config
 ENV HOME=/tmp
 EXPOSE 8080
 
-ENTRYPOINT ["/entrypoint.sh", "dotnet", "PptxNarrator.Api.dll"]
+ENTRYPOINT ["dotnet", "PptxNarrator.Api.dll"]

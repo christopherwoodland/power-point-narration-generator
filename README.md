@@ -81,9 +81,9 @@ After the container starts, run `az login` and then `bash scripts/run.sh` (or `p
 | Docker Desktop | For Docker Compose / container workflow only |
 
 > **Auth note:** All Azure connections use `DefaultAzureCredential` — no API keys anywhere.
-> - **Native dev (`run.ps1`):** `az login` on the host is sufficient.
-> - **Docker Compose (`run-docker.ps1`):** Requires a service principal (`AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET` in `.env`) because the Windows DPAPI-encrypted token cache cannot be read by Linux containers. See the [Running with Docker Compose](#running-with-docker-compose) section.
-> - **Production (Container Apps):** Managed Identity — no secrets or env vars needed.
+> - **Native dev (`run.ps1` / `run.sh`) — recommended for local work:** `az login` on the host is sufficient. The backend process runs under your user account, which is on a managed (compliant) device and satisfies any tenant Conditional Access policies.
+> - **Docker Compose (`run-docker.ps1`) — limited:** Linux containers are **unmanaged devices** from Entra ID's perspective. If your tenant has a Conditional Access policy that requires the device to be Microsoft-managed/compliant (most Microsoft-internal tenants do — including the Microsoft Non-Production tenant `16b3c013-d300-468d-ac64-7eda0820b6d3` that this app targets by default), **all interactive sign-in flows from inside the container will fail** with: `Your sign-in was successful but your admin requires the device requesting access to be managed by <tenant> to access this resource.` This applies to: in-container `az login` (device code or browser), service-principal credentials whose CA policy also requires a managed device, and any attempt to bind-mount the host `~/.azure` cache (the Windows MSAL cache is DPAPI-encrypted and unreadable on Linux). **For these tenants, use the native dev path locally** and reserve Docker Compose for tenants without device-compliance CA, or for testing the container build itself. See [Running with Docker Compose](#running-with-docker-compose) for details.
+> - **Production (Container Apps):** Managed Identity — no secrets, no env vars, no Conditional Access device check (the platform's IMDS endpoint is exempt). This always works.
 
 ---
 
@@ -130,46 +130,48 @@ Swagger UI is available at **http://localhost:8080/swagger**.
 
 ## Running with Docker Compose
 
-> **Note:** `run.ps1` / `run.sh` (native .NET + Vite) is the simpler path for day-to-day local development — it uses your host `az login` session directly and requires no extra setup.
-> Use Docker Compose when you want to test the containerised deployment (closer to production).
+> **Note:** `run.ps1` / `run.sh` (native .NET + Vite) is the **recommended** path for day-to-day local development — it uses your host `az login` session directly, satisfies tenant device-compliance Conditional Access policies, and requires no extra setup.
+> Docker Compose is useful for testing the containerised deployment shape, but local Azure auth from inside the container is **not supported** in tenants that enforce a managed-device CA policy (see below).
 
-### Why Docker requires a service principal
+### Why Docker auth is hard locally
 
-Windows encrypts the Azure CLI token cache (`msal_token_cache.bin`) with DPAPI — a Windows-only mechanism that Linux containers cannot decrypt. This means the host `az login` session **cannot** be shared with the container. Instead, the container uses `EnvironmentCredential` (client ID + secret) which `DefaultAzureCredential` picks up automatically.
+Three separate problems combine to make `DefaultAzureCredential` painful inside a local Linux container on a Windows host:
+
+1. **Windows DPAPI token cache.** The host's `~/.azure/msal_token_cache.bin` is encrypted with DPAPI (a Windows-only mechanism tied to your Windows user). Linux containers cannot decrypt it, so bind-mounting `~/.azure` into the container does **not** share your `az login` session.
+2. **Conditional Access "managed device" policy.** The Microsoft Non-Production tenant (and most Microsoft-internal tenants) require the signing-in device to be Entra-joined and compliant. A Linux container is neither, so any interactive auth started from inside the container — `az login --use-device-code`, browser flow, etc. — fails with: `Your sign-in was successful but your admin requires the device requesting access to be managed by <tenant> to access this resource.`
+3. **Service-principal CA blocking.** Service-principal client-secret auth (`AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET`) is not subject to device CA, but many tenants apply additional CA policies to service principals (workload-identity CA, secret-rotation policy, IP restrictions, etc.) and may block them too. SP credentials also expire and must be rotated.
+
+**Bottom line:** for the default tenant this repo targets, Docker Compose locally cannot reach Azure AI services. Use `scripts/run.ps1` (Windows) or `scripts/run.sh` (Linux/macOS/Dev Container) instead — your host's `az login` already works.
+
+If your target tenant does **not** enforce device-compliance CA and you have a working service principal, you can still use Docker Compose:
 
 ### One-time setup
 
-**1. Use the existing service principal (already has the required roles):**
-
-| Setting | Value |
-|---------|-------|
-| `AZURE_TENANT_ID` | `16b3c013-d300-468d-ac64-7eda0820b6d3` |
-| `AZURE_CLIENT_ID` | `98e8135d-5ca5-4015-b0ac-825ae189de20` |
-| `AZURE_CLIENT_SECRET` | *(generate a new secret — see below)* |
-
-The SP already has these roles on `bhs-development-public-foundry-r`:
-- `Cognitive Services User` — required for the Speech STS `/issueToken` exchange
-- `Cognitive Services Speech User`
-- `Cognitive Services OpenAI User`
-
-**2. If the secret has expired, create a new one** (tenant policy limits lifetime, check the max allowed):
+**1. Create a service principal and grant it the required roles:**
 
 ```powershell
-az ad app credential reset `
-  --id 98e8135d-5ca5-4015-b0ac-825ae189de20 `
-  --display-name "pptx-narrator-local" `
-  --end-date <YYYY-MM-DD>   # within the tenant policy limit
+$sp = az ad sp create-for-rbac --name pptx-narrator-local --skip-assignment | ConvertFrom-Json
+$aiResourceId = az cognitiveservices account show `
+  --name <your-ai-resource-name> `
+  --resource-group <your-ai-rg> `
+  --query id -o tsv
+
+az role assignment create --assignee $sp.appId --role "Cognitive Services User"        --scope $aiResourceId
+az role assignment create --assignee $sp.appId --role "Cognitive Services Speech User" --scope $aiResourceId
+az role assignment create --assignee $sp.appId --role "Cognitive Services OpenAI User" --scope $aiResourceId   # only if AI mode
 ```
 
-Copy the `password` field from the output.
+Copy `appId`, `password`, and `tenant` from the `$sp` output.
 
-**3. Add the credentials to `.env`:**
+**2. Add the credentials to `.env`:**
 
 ```env
-AZURE_TENANT_ID=16b3c013-d300-468d-ac64-7eda0820b6d3
-AZURE_CLIENT_ID=98e8135d-5ca5-4015-b0ac-825ae189de20
-AZURE_CLIENT_SECRET=<password from above>
+AZURE_TENANT_ID=<tenant>
+AZURE_CLIENT_ID=<appId>
+AZURE_CLIENT_SECRET=<password>
 ```
+
+> Tenant policy may cap the secret lifetime. Rotate with `az ad app credential reset --id <appId> --display-name pptx-narrator-local --end-date <YYYY-MM-DD>`.
 
 ### Start
 
@@ -522,6 +524,12 @@ The frontend meets **WCAG 2.1 Level AA / Section 508** standards:
 
 **Backend won't start / auth errors**
 Run `az login --tenant 16b3c013-d300-468d-ac64-7eda0820b6d3`. If `AZURE_TENANT_ID` is not set, `DefaultAzureCredential` may pick up a different tenant token.
+
+**`Your sign-in was successful but your admin requires the device requesting access to be managed by <tenant>...`**
+You are running the backend inside a local Docker container on a tenant that enforces a Conditional Access "compliant device" policy. Linux containers are unmanaged devices, so all interactive Azure sign-in flows from inside the container will fail with this error — including `az login --use-device-code`, browser flows, and any token requested by `DefaultAzureCredential` chain entries that depend on them. **Fix:** run the backend natively on your (managed) host instead — `scripts/run.ps1` on Windows or `scripts/run.sh` on Linux/macOS. The host's `az login` session satisfies the device check. Production deployments on Azure Container Apps are not affected because Managed Identity bypasses CA entirely.
+
+**`ClientSecretCredential authentication failed ... AADSTS7000215: Invalid client secret provided`**
+The service principal's client secret has expired or was rotated. Either rotate the secret (`az ad app credential reset --id <client-id>`) and update `.env`, or — recommended — switch to native dev (`scripts/run.ps1`) and clear `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` from `.env` so `DefaultAzureCredential` falls through to `AzureCliCredential`.
 
 **No telemetry in Application Insights**
 Set `APPLICATIONINSIGHTS_CONNECTION_STRING` in your environment or `appsettings.json`. When left blank, the app runs without App Insights — no error is raised. Structured logs always go to the console/host logger regardless.

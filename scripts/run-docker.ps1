@@ -1,10 +1,25 @@
 # run-docker.ps1 — Run the PowerPoint Narration Generator locally via Docker Compose
 #
 # Builds both images (C# backend + React frontend) and starts them together.
-# Azure identity is provided via DefaultAzureCredential (AzureCliCredential):
-#   - The host's ~/.azure config is mounted read-only into the container.
-#   - Run 'az login' on the host before running this script.
-#   - In Azure Container Apps (production) Managed Identity is used instead.
+#
+# IMPORTANT — local Azure auth limitation:
+#   Local Docker on Windows cannot use your host 'az login' session (the MSAL
+#   token cache is Windows DPAPI-encrypted and unreadable on Linux). And in
+#   tenants that enforce a Conditional Access "compliant device" policy
+#   (including the default Microsoft Non-Production tenant), interactive
+#   sign-in from inside the container fails with:
+#       Your sign-in was successful but your admin requires the device
+#       requesting access to be managed by <tenant> to access this resource.
+#   For day-to-day local development on those tenants, use the NATIVE script
+#   instead:  .\scripts\run.ps1   (Windows)   or   bash scripts/run.sh
+#   It runs the backend on your managed host where 'az login' already works.
+#
+#   Docker Compose still works for tenants without device-compliance CA, if you
+#   provide a working service principal in .env (AZURE_CLIENT_ID +
+#   AZURE_CLIENT_SECRET). See README "Running with Docker Compose".
+#
+#   Production (Azure Container Apps) is unaffected — Managed Identity is used
+#   and bypasses Conditional Access entirely.
 #
 # Usage:  .\run-docker.ps1
 # Then open:  http://localhost:3000  (frontend)
