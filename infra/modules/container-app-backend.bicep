@@ -18,6 +18,7 @@ param backendCorsAllowedOrigins array
 // Azure service config
 param azureSpeechResourceName string
 param azureSpeechRegion string
+param azureTtsMaxParallelism int
 param azureOpenAiEndpoint string
 param azureOpenAiDeployment string
 param azureImageDeployment string
@@ -102,6 +103,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'CORS_ALLOWED_ORIGINS', value: join(corsAllowedOrigins, ',') }
             { name: 'AZURE_SPEECH_RESOURCE_NAME', value: azureSpeechResourceName }
             { name: 'AZURE_SPEECH_REGION', value: azureSpeechRegion }
+            { name: 'AZURE_TTS_MAX_PARALLELISM', value: string(azureTtsMaxParallelism) }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_IMAGE_DEPLOYMENT', value: azureImageDeployment }

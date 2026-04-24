@@ -46,14 +46,21 @@ public sealed class TtsService : ITtsService
 
         var url = $"https://{_opts.AzureSpeechRegion}.tts.speech.microsoft.com/cognitiveservices/v1";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("Authorization", $"Bearer {stsToken}");
-        request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
-        request.Headers.Add("User-Agent", "PptxNarrator/1.0");
-        request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");
-
         var client = _http.CreateClient("tts");
-        var response = await client.SendAsync(request, ct);
+        var response = await HttpRetryHelper.SendWithRetryAsync(
+            client,
+            () =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Authorization", $"Bearer {stsToken}");
+                request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
+                request.Headers.Add("User-Agent", "PptxNarrator/1.0");
+                request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");
+                return request;
+            },
+            _log,
+            "TTS synthesis",
+            ct);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsByteArrayAsync(ct);
@@ -73,14 +80,21 @@ public sealed class TtsService : ITtsService
         // Foundry TTS REST endpoint with aad#resourceId#token auth format
         var url = $"{_opts.AzureVoiceEndpoint.TrimEnd('/')}/tts/cognitiveservices/v1";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("Authorization", $"Bearer {aad.Token}");
-        request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
-        request.Headers.Add("User-Agent", "PptxNarrator/1.0");
-        request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");
-
         var client = _http.CreateClient("tts");
-        var response = await client.SendAsync(request, ct);
+        var response = await HttpRetryHelper.SendWithRetryAsync(
+            client,
+            () =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Authorization", $"Bearer {aad.Token}");
+                request.Headers.Add("X-Microsoft-OutputFormat", "audio-24khz-48kbitrate-mono-mp3");
+                request.Headers.Add("User-Agent", "PptxNarrator/1.0");
+                request.Content = new StringContent(ssml, Encoding.UTF8, "application/ssml+xml");
+                return request;
+            },
+            _log,
+            "TTS synthesis",
+            ct);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsByteArrayAsync(ct);
@@ -102,14 +116,20 @@ public sealed class TtsService : ITtsService
             // Step 2: Exchange AAD token for Speech STS token
             var stsUrl = $"https://{_opts.AzureSpeechResourceName}.cognitiveservices.azure.com/sts/v1.0/issueToken";
 
-            using var req = new HttpRequestMessage(HttpMethod.Post, stsUrl);
-            req.Headers.Add("Authorization", $"Bearer {aad.Token}");
-            // Empty body — STS endpoint requires POST but no body content
-            req.Content = new ByteArrayContent(Array.Empty<byte>());
-            req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
-
             var client = _http.CreateClient("sts");
-            var resp = await client.SendAsync(req, ct);
+            var resp = await HttpRetryHelper.SendWithRetryAsync(
+                client,
+                () =>
+                {
+                    var req = new HttpRequestMessage(HttpMethod.Post, stsUrl);
+                    req.Headers.Add("Authorization", $"Bearer {aad.Token}");
+                    req.Content = new ByteArrayContent(Array.Empty<byte>());
+                    req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
+                    return req;
+                },
+                _log,
+                "Speech token exchange",
+                ct);
             resp.EnsureSuccessStatusCode();
 
             _stsToken = await resp.Content.ReadAsStringAsync(ct);

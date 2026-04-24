@@ -42,12 +42,19 @@ public class AppOptions
     /// <summary>Base URL of the Foundry resource for MAI Voice. Env: AZURE_VOICE_ENDPOINT</summary>
     public string AzureVoiceEndpoint { get; set; } = "";
 
+    /// <summary>
+    /// Max number of concurrent slide TTS operations.
+    /// Keep this bounded to avoid throttling. Env: AZURE_TTS_MAX_PARALLELISM
+    /// </summary>
+    public int TtsMaxParallelism { get; set; } = 4;
+
     // ── Azure Document Intelligence ─────────────────────────────────────────
     public string AzureDocIntelEndpoint { get; set; } =
         "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/";
 
     // ── UI ──────────────────────────────────────────────────────────────────
     public string AppBannerMessage { get; set; } = "";
+    public string UploadFilesMessage { get; set; } = "Provide a narration script and (optionally) a PowerPoint to narrate.";
 
     // ── Application Insights ─────────────────────────────────────────────────
     /// <summary>Optional. Enables Application Insights telemetry. Env: APPLICATIONINSIGHTS_CONNECTION_STRING</summary>

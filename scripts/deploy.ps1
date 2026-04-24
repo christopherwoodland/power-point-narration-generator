@@ -32,6 +32,10 @@
     Optional resource group containing the Azure AI / Cognitive Services account.
     Defaults to -ResourceGroup.
 
+.PARAMETER TtsMaxParallelism
+    Optional override for AZURE_TTS_MAX_PARALLELISM passed to the backend Container App.
+    Defaults to azureTtsMaxParallelism from infra/parameters.json, or 4 if omitted there.
+
 .PARAMETER SkipRoleAssignment
     Skip automatic assignment of the backend managed identity role on Azure AI/Cognitive Services.
 
@@ -40,6 +44,9 @@
 
 .EXAMPLE
     .\deploy.ps1 -ResourceGroup my-rg -AcrName myacr -UseAcrBuild
+
+.EXAMPLE
+    .\deploy.ps1 -ResourceGroup my-rg -AcrName myacr -TtsMaxParallelism 6
 #>
 param(
     [Parameter(Mandatory)]
@@ -52,6 +59,7 @@ param(
     [switch] $UseAcrBuild,
     [string] $AiResourceName = "",
     [string] $AiResourceGroup = "",
+    [int] $TtsMaxParallelism = 0,
     [switch] $SkipRoleAssignment
 )
 
@@ -114,6 +122,18 @@ else {
     $AiResourceGroup
 }
 
+$resolvedTtsMaxParallelism = if ($TtsMaxParallelism -gt 0) {
+    $TtsMaxParallelism
+}
+elseif ($null -ne $paramJson.parameters.azureTtsMaxParallelism -and [int]$paramJson.parameters.azureTtsMaxParallelism.value -gt 0) {
+    [int]$paramJson.parameters.azureTtsMaxParallelism.value
+}
+else {
+    4
+}
+
+Write-Host "  TTS Parallelism: $resolvedTtsMaxParallelism"
+
 # ── Build & push backend ──────────────────────────────────────────────────────
 Write-Step 1 "Build + push backend image"
 
@@ -163,6 +183,7 @@ $deployment = az deployment group create `
     --parameters containerRegistryName=$AcrName `
     backendImage=$BackendImage `
     frontendImage=$FrontendImage `
+    azureTtsMaxParallelism=$resolvedTtsMaxParallelism `
     --output json | ConvertFrom-Json
 
 if ($LASTEXITCODE -ne 0) { Write-Error "Bicep deployment failed."; exit 1 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PptxNarrator.Api.Controllers;
@@ -19,6 +20,9 @@ public class NarrationController : ControllerBase
     private readonly IVideoExporterService _videoExporter;
     private readonly AppOptions _opts;
     private readonly ILogger<NarrationController> _log;
+
+    private sealed record SlideSynthesisRequest(int SourceSlideIndex, int TargetSlideIndex, string Text);
+    private sealed record SlideSynthesisFailure(int SourceSlideIndex, int TargetSlideIndex, string Message);
 
     public NarrationController(
         IWordParserService wordParser,
@@ -53,6 +57,7 @@ public class NarrationController : ControllerBase
         enable_ai_mode = _opts.EnableAiMode,
         enable_video_export = _opts.EnableVideoExport,
         banner_message = _opts.AppBannerMessage,
+        upload_files_message = _opts.UploadFilesMessage,
         tts_mode = _opts.AzureTtsMode,
     });
 
@@ -119,26 +124,24 @@ public class NarrationController : ControllerBase
             for (int i = 0; i < Math.Min(slides.Count, pptxSlideCount); i++)
                 mapping[i] = i;
 
-        // Per-PPTX-slide audio (null = no audio)
-        var slideAudio = new byte[]?[pptxSlideCount];
-
-        foreach (var (wordIdx, pptxIdx) in mapping)
+        List<SlideSynthesisRequest> requests;
+        try
         {
-            if (wordIdx >= slides.Count || pptxIdx >= pptxSlideCount) continue;
-            var text = slides[wordIdx].Text?.Trim() ?? "";
-            if (string.IsNullOrEmpty(text)) continue;
+            requests = BuildSynthesisRequests(mapping, slides, pptxSlideCount);
+        }
+        catch (ArgumentException ex)
+        {
+            return UnprocessableEntity(new { detail = ex.Message });
+        }
 
-            _log.LogInformation("[Process] Synthesising slide {W}→{P}", wordIdx + 1, pptxIdx + 1);
-            try
-            {
-                var translated = await _translator.TranslateForVoiceAsync(text, voice, ct);
-                slideAudio[pptxIdx] = await _tts.SynthesizeToMp3Async(translated, voice, ct);
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "[Process] TTS failed for slide {W}→{P}", wordIdx + 1, pptxIdx + 1);
-                return StatusCode(502, new { detail = $"TTS failed for slide {wordIdx + 1}: {ex.Message}" });
-            }
+        byte[]?[] slideAudio;
+        try
+        {
+            slideAudio = await SynthesizeSlidesAsync(requests, voice, pptxSlideCount, progressTotal: pptxSlideCount, onProgress: null, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return StatusCode(502, new { detail = ex.Message });
         }
 
         _log.LogInformation("[Process] Embedding audio — {N} slides have audio",
@@ -185,35 +188,60 @@ public class NarrationController : ControllerBase
 
         try
         {
-            void OnProgress(int slideNum, int total, string phase) =>
-                Response.WriteAsync(JsonSerializer.Serialize(new
+            var responseWriteLock = new SemaphoreSlim(1, 1);
+
+            void OnProgress(int slideNum, int total, string phase)
+            {
+                responseWriteLock.Wait(ct);
+                try
                 {
-                    type = "progress",
-                    slide = slideNum,
-                    total,
-                    phase,
-                    message = $"{phase} slide {slideNum} of {total}…"
-                }) + "\n", ct).GetAwaiter().GetResult();
+                    Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        type = "progress",
+                        slide = slideNum,
+                        total,
+                        phase,
+                        message = $"{phase} slide {slideNum} of {total}…"
+                    }) + "\n", ct).GetAwaiter().GetResult();
+                    Response.Body.FlushAsync(ct).GetAwaiter().GetResult();
+                }
+                finally
+                {
+                    responseWriteLock.Release();
+                }
+            };
+
+            async Task SendTtsProgressAsync(int slideNum, int total)
+            {
+                await responseWriteLock.WaitAsync(ct);
+                try
+                {
+                    await Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        type = "progress",
+                        slide = slideNum,
+                        total,
+                        phase = "tts",
+                        message = $"tts slide {slideNum} of {total}…"
+                    }) + "\n", ct);
+                    await Response.Body.FlushAsync(ct);
+                }
+                finally
+                {
+                    responseWriteLock.Release();
+                }
+            }
 
             var pptxBytes = await _aiGenerator.BuildPresentationAsync(slides, OnProgress, ct);
 
-            var slideAudio = new byte[]?[slides.Count];
-            for (int i = 0; i < slides.Count; i++)
-            {
-                var text = slides[i].Text?.Trim() ?? "";
-                if (string.IsNullOrEmpty(text)) continue;
-
-                OnProgress(i + 1, slides.Count, "tts");
-                try
-                {
-                    var translated = await _translator.TranslateForVoiceAsync(text, voice, ct);
-                    slideAudio[i] = await _tts.SynthesizeToMp3Async(translated, voice, ct);
-                }
-                catch (Exception ex)
-                {
-                    _log.LogWarning(ex, "TTS failed for slide {N}", i + 1);
-                }
-            }
+            var requests = BuildSequentialSynthesisRequests(slides);
+            var slideAudio = await SynthesizeSlidesAsync(
+                requests,
+                voice,
+                slides.Count,
+                slides.Count,
+                SendTtsProgressAsync,
+                ct);
 
             var result = _pptxBuilder.EmbedAudio(pptxBytes, slideAudio);
             await Send(new { type = "done", pptx = Convert.ToBase64String(result) });
@@ -299,6 +327,100 @@ public class NarrationController : ControllerBase
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    private static List<SlideSynthesisRequest> BuildSynthesisRequests(
+        IReadOnlyDictionary<int, int> mapping,
+        IReadOnlyList<SlideInfo> slides,
+        int pptxSlideCount)
+    {
+        var requests = new List<SlideSynthesisRequest>();
+        var claimedTargets = new HashSet<int>();
+
+        foreach (var (wordIdx, pptxIdx) in mapping.OrderBy(pair => pair.Key))
+        {
+            if (wordIdx >= slides.Count || pptxIdx >= pptxSlideCount)
+                continue;
+
+            var text = slides[wordIdx].Text?.Trim() ?? "";
+            if (string.IsNullOrEmpty(text))
+                continue;
+
+            if (!claimedTargets.Add(pptxIdx))
+                throw new ArgumentException(
+                    $"Multiple script slides map to PowerPoint slide {pptxIdx + 1}. Each PowerPoint slide can only have one narration track.");
+
+            requests.Add(new SlideSynthesisRequest(wordIdx, pptxIdx, text));
+        }
+
+        return requests;
+    }
+
+    private static List<SlideSynthesisRequest> BuildSequentialSynthesisRequests(IReadOnlyList<SlideInfo> slides)
+    {
+        var requests = new List<SlideSynthesisRequest>();
+
+        for (int i = 0; i < slides.Count; i++)
+        {
+            var text = slides[i].Text?.Trim() ?? "";
+            if (string.IsNullOrEmpty(text))
+                continue;
+
+            requests.Add(new SlideSynthesisRequest(i, i, text));
+        }
+
+        return requests;
+    }
+
+    private async Task<byte[]?[]> SynthesizeSlidesAsync(
+        IReadOnlyList<SlideSynthesisRequest> requests,
+        string voice,
+        int outputSlideCount,
+        int progressTotal,
+        Func<int, int, Task>? onProgress,
+        CancellationToken ct)
+    {
+        var slideAudio = new byte[]?[outputSlideCount];
+        if (requests.Count == 0)
+            return slideAudio;
+
+        var failures = new ConcurrentQueue<SlideSynthesisFailure>();
+
+        await Parallel.ForEachAsync(
+            requests,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = _opts.TtsMaxParallelism,
+                CancellationToken = ct,
+            },
+            async (request, itemCt) =>
+            {
+                try
+                {
+                    _log.LogInformation("[TTS] Synthesising slide {W}→{P}", request.SourceSlideIndex + 1, request.TargetSlideIndex + 1);
+
+                    var translated = await _translator.TranslateForVoiceAsync(request.Text, voice, itemCt);
+                    slideAudio[request.TargetSlideIndex] = await _tts.SynthesizeToMp3Async(translated, voice, itemCt);
+
+                    if (onProgress is not null)
+                        await onProgress(request.SourceSlideIndex + 1, progressTotal);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    failures.Enqueue(new SlideSynthesisFailure(
+                        request.SourceSlideIndex,
+                        request.TargetSlideIndex,
+                        ex.Message));
+
+                    _log.LogError(ex, "[TTS] Failed for slide {W}→{P}", request.SourceSlideIndex + 1, request.TargetSlideIndex + 1);
+                }
+            });
+
+        if (failures.IsEmpty)
+            return slideAudio;
+
+        var failure = failures.OrderBy(item => item.SourceSlideIndex).First();
+        throw new InvalidOperationException($"TTS failed for slide {failure.SourceSlideIndex + 1}: {failure.Message}");
+    }
 
     private IReadOnlyList<SlideInfo> ParseScript(string filename, byte[] bytes)
     {

@@ -40,6 +40,9 @@
     "azureSpeechRegion": {
       "value": "eastus2"
     },
+    "azureTtsMaxParallelism": {
+      "value": 4
+    },
     "azureOpenAiEndpoint": {
       "value": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com"
     },

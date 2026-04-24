@@ -48,6 +48,10 @@ param azureSpeechResourceName string = 'bhs-development-public-foundry-r'
 @description('Azure Speech service region')
 param azureSpeechRegion string = 'eastus2'
 
+@description('Max number of slide TTS operations to run concurrently')
+@minValue(1)
+param azureTtsMaxParallelism int = 4
+
 @description('Azure OpenAI endpoint URL (leave empty if not using AI mode)')
 param azureOpenAiEndpoint string = ''
 
@@ -88,6 +92,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
     corsAllowedOrigins: backendCorsAllowedOrigins
     azureSpeechResourceName: azureSpeechResourceName
     azureSpeechRegion: azureSpeechRegion
+    azureTtsMaxParallelism: azureTtsMaxParallelism
     azureOpenAiEndpoint: azureOpenAiEndpoint
     azureOpenAiDeployment: azureOpenAiDeployment
     azureImageDeployment: azureImageDeployment

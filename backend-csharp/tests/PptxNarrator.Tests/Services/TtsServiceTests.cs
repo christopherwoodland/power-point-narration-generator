@@ -99,6 +99,23 @@ public class TtsServiceTests
         stsCallCount.Should().Be(1, "STS token should be cached after first call");
     }
 
+    [Fact]
+    public async Task SynthesizeToMp3Async_Transient429_RetriesAndSucceeds()
+    {
+        int ttsCallCount = 0;
+        var expectedMp3 = Encoding.UTF8.GetBytes("ID3FAKEMP3DATA");
+        var (sut, _) = BuildSut(
+            stsResponse: FakeStsToken,
+            ttsResponse: expectedMp3,
+            transientTtsFailureBeforeSuccess: true,
+            onTtsCall: () => ttsCallCount++);
+
+        var result = await sut.SynthesizeToMp3Async("Hello world", "en-US-JennyNeural");
+
+        result.Should().Equal(expectedMp3);
+        ttsCallCount.Should().Be(2);
+    }
+
     // ── Test builder ──────────────────────────────────────────────────────
 
     private static (TtsService Sut, Mock<HttpMessageHandler> Handler) BuildSut(
@@ -106,9 +123,12 @@ public class TtsServiceTests
         byte[]? ttsResponse = null,
         HttpStatusCode ttsStatusCode = HttpStatusCode.OK,
         Action<string>? captureTtsBody = null,
-        Action? onStsCall = null)
+        Action? onStsCall = null,
+        Action? onTtsCall = null,
+        bool transientTtsFailureBeforeSuccess = false)
     {
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        int ttsCallCount = 0;
 
         // STS token exchange
         handlerMock.Protected()
@@ -135,8 +155,20 @@ public class TtsServiceTests
                 ItExpr.IsAny<CancellationToken>())
             .Returns((HttpRequestMessage req, CancellationToken _) =>
             {
+                onTtsCall?.Invoke();
+                ttsCallCount++;
+
                 if (captureTtsBody is not null)
                     captureTtsBody(req.Content!.ReadAsStringAsync().GetAwaiter().GetResult());
+
+                if (transientTtsFailureBeforeSuccess && ttsCallCount == 1)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+                    {
+                        Headers = { RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero) }
+                    });
+                }
+
                 return Task.FromResult(new HttpResponseMessage(ttsStatusCode)
                 {
                     Content = new ByteArrayContent(ttsResponse ?? [])

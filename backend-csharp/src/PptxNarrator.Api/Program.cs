@@ -26,9 +26,13 @@ builder.Services.Configure<AppOptions>(opts =>
         ?? opts.AzureTtsMode;
     opts.AzureVoiceEndpoint = builder.Configuration["AZURE_VOICE_ENDPOINT"]
         ?? opts.AzureVoiceEndpoint;
+    opts.TtsMaxParallelism = Math.Max(1,
+        builder.Configuration.GetValue("AZURE_TTS_MAX_PARALLELISM", opts.TtsMaxParallelism));
     opts.AzureDocIntelEndpoint = builder.Configuration["AZURE_DOC_INTEL_ENDPOINT"]
         ?? opts.AzureDocIntelEndpoint;
     opts.AppBannerMessage = builder.Configuration["APP_BANNER_MESSAGE"] ?? "";
+    opts.UploadFilesMessage = builder.Configuration["UPLOAD_FILES_MESSAGE"]
+        ?? opts.UploadFilesMessage;
     opts.ApplicationInsightsConnectionString =
         builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
         ?? builder.Configuration["ApplicationInsights:ConnectionString"];

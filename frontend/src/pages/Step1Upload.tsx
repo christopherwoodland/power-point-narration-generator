@@ -48,7 +48,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
       <div className="panel-header">
         <h2 className="panel-title">Upload your files</h2>
         <p className="panel-subtitle">
-          Provide a narration script and (optionally) a PowerPoint to narrate.
+          {config.upload_files_message}
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
         <button
           className="btn btn--primary"
           disabled={!canProceed || loading}
-          aria-busy={loading}
+          aria-busy={loading ? 'true' : 'false'}
           data-testid="btn-next-step1"
           onClick={handleNext}
         >

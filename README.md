@@ -207,6 +207,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `AZURE_SPEECH_RESOURCE_NAME` | `bhs-development-public-foundry-r` | Cognitive Services / Foundry resource name used for TTS + STT. |
 | `AZURE_SPEECH_REGION` | `eastus2` | Region of the Speech resource. |
 | `AZURE_TTS_MODE` | `standard` | `standard` = regional Azure Speech; `mai` = Foundry MAI-Voice-1 endpoint. |
+| `AZURE_TTS_MAX_PARALLELISM` | `4` | Max number of slides synthesized concurrently. Start with `3` or `4`; higher values can improve throughput but may increase `429` throttling. |
 | `AZURE_VOICE_ENDPOINT` | *(blank)* | Foundry resource base URL. Used only when `AZURE_TTS_MODE=mai`. |
 | `AZURE_OPENAI_ENDPOINT` | `https://bhs-development-public-foundry-r.cognitiveservices.azure.com` | Azure OpenAI / Foundry chat endpoint. Required for AI mode. |
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.2` | Chat deployment name. |
@@ -215,6 +216,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `AZURE_DOC_INTEL_ENDPOINT` | `https://bhs-development-public-foundry-r.cognitiveservices.azure.com/` | Optional Document Intelligence endpoint for OCR fallback in PPTX parsing. Leave blank to skip. |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | *(blank)* | Enables Application Insights telemetry when set. App Insights is skipped when blank — no error. |
 | `APP_BANNER_MESSAGE` | *(blank)* | Optional banner text rendered at the top of the UI. |
+| `UPLOAD_FILES_MESSAGE` | `Provide a narration script and (optionally) a PowerPoint to narrate.` | Optional Step 1 helper text shown under "Upload your files". |
 | `AZURE_TENANT_ID` | *(blank)* | Pins `DefaultAzureCredential` to a specific tenant. Recommended in multi-tenant environments. |
 | `AZURE_CLIENT_ID` | *(blank)* | **Local Docker only** — service principal client ID for `EnvironmentCredential`. Leave blank in ACA (uses Managed Identity). |
 | `AZURE_CLIENT_SECRET` | *(blank)* | **Local Docker only** — service principal secret. Leave blank in ACA. |
@@ -228,6 +230,10 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 
 > **Note on Azure Translator:** The Translator client reuses the Speech / Cognitive Services resource and does not require its own endpoint variable.
 
+> **Note on TTS completion semantics:** generation now uses bounded parallel TTS. A run succeeds only when every required slide with narration text completes translation and TTS successfully. If any required slide fails, the request fails instead of returning a partially narrated deck.
+
+> **Note on transient Azure failures:** TTS, translation, and Speech token exchange use a small built-in retry policy for transient `408`, `429`, and `5xx` responses. `Retry-After` is honored when Azure provides it.
+
 > **Note on `appsettings.json`:** All backend values can also be set under the `App:` section of `backend-csharp/src/PptxNarrator.Api/appsettings.json` (see `appsettings.example.json`). Environment variables always win over `appsettings.json`.
 
 ---
@@ -238,7 +244,7 @@ The 4-step wizard guides you through:
 
 1. **Upload** — provide a Word (`.docx`) or PPTX (`.pptx`) script, your target PowerPoint deck, choose a voice, and optionally enable AI mode.
 2. **Map slides** — verify the script-to-slide mapping (reorder if needed).
-3. **Generate** — watch real-time progress as audio is synthesised per slide and embedded, then download the narrated `.pptx`. Optionally export to `.mp4`.
+3. **Generate** — watch real-time progress as audio is synthesized in bounded parallel per slide and embedded, then download the narrated `.pptx`. Generation only completes successfully when all required slide narrations succeed. Optionally export to `.mp4`.
 4. **Quality check** — optional STT-based pass that estimates comprehension confidence per slide and flags any unclear words.
 
 ---
@@ -305,7 +311,8 @@ dotnet test --no-build -v normal
 Covers:
 - `NarrationControllerTests` — config, parse, process endpoints
 - `PptxBuilderServiceTests` — audio embedding, timing XML, content types
-- `TtsServiceTests` — SSML construction, HTTP mocking
+- `TtsServiceTests` — SSML construction, HTTP mocking, transient retry behavior
+- `TranslatorServiceTests` — locale handling and transient retry behavior
 - `WordParserServiceTests` — Word document parsing
 
 ### Playwright end-to-end tests
@@ -386,6 +393,7 @@ Update `infra/parameters.json` for your environment:
 - `environmentName` (for example: `prod`)
 - `azureSpeechResourceName`
 - `azureSpeechRegion`
+- `azureTtsMaxParallelism` (start with `4`)
 - `azureOpenAiEndpoint`
 - `azureOpenAiDeployment`
 - `azureImageDeployment`
@@ -409,10 +417,17 @@ ACR cloud build (no local Docker required):
 .\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -UseAcrBuild
 ```
 
+Override TTS concurrency for a one-off deployment without editing `infra/parameters.json`:
+
+```powershell
+.\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -TtsMaxParallelism 6
+```
+
 The script will:
 1. Build and push both images to ACR.
 2. Deploy `infra/main.bicep` with image references.
 3. Provision Container Apps environment, frontend app, backend app, and managed identities.
+4. Pass `azureTtsMaxParallelism` through to the backend Container App as `AZURE_TTS_MAX_PARALLELISM`.
 
 ### 4. Post-deploy configuration behavior
 
@@ -426,6 +441,8 @@ If your Azure AI/Cognitive Services account is in a different resource group or 
 ```powershell
 .\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -AiResourceGroup <ai-rg> -AiResourceName <ai-resource-name>
 ```
+
+For production, prefer a stable `azureTtsMaxParallelism` value over the highest possible value. Higher concurrency can reduce narration time on large decks, but it also increases the chance of `429` throttling from Speech or Translator. Because generation now uses all-or-nothing completion semantics, a conservative value like `4` is usually the right starting point.
 
 If your deployer identity cannot create role assignments (`Microsoft.Authorization/roleAssignments/write`), the script will warn and continue. In that case, assign roles manually:
 

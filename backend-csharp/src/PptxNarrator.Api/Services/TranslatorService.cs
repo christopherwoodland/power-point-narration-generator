@@ -56,12 +56,19 @@ public sealed class TranslatorService : ITranslatorService
 
         var body = JsonSerializer.Serialize(new[] { new { Text = text } });
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("Authorization", $"Bearer {aad.Token}");
-        request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
         var client = _http.CreateClient("translator");
-        var resp = await client.SendAsync(request, ct);
+        var resp = await HttpRetryHelper.SendWithRetryAsync(
+            client,
+            () =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Authorization", $"Bearer {aad.Token}");
+                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                return request;
+            },
+            _log,
+            "Translation",
+            ct);
         resp.EnsureSuccessStatusCode();
 
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
