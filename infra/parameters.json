@@ -44,10 +44,10 @@
       "value": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com"
     },
     "azureOpenAiDeployment": {
-      "value": "gpt-4o"
+      "value": "gpt-4.1"
     },
     "azureImageDeployment": {
-      "value": "dall-e-3"
+      "value": "gpt-image-1.5"
     },
     "azureDocIntelEndpoint": {
       "value": ""
