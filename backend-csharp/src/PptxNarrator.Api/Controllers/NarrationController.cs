@@ -209,7 +209,8 @@ public class NarrationController : ControllerBase
                 {
                     responseWriteLock.Release();
                 }
-            };
+            }
+            ;
 
             async Task SendTtsProgressAsync(int slideNum, int total)
             {
