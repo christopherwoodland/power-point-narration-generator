@@ -11,6 +11,7 @@ export async function fetchConfig(): Promise<AppConfig> {
       enable_video_export: true,
       banner_message: '',
       tts_mode: 'standard',
+      upload_files_message: '',
     };
   }
   return res.json();
