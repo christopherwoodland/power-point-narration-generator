@@ -63,11 +63,22 @@ param(
     [switch] $SkipRoleAssignment
 )
 
-Set-StrictMode -Version Latest
+$paramFile = ""
+
 $ErrorActionPreference = "Stop"
 
-# Resolve repo root (parent of the scripts/ folder this script lives in)
-$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Resolve repo root (parent of the scripts/ folder this script lives in).
+# Prefer $PSScriptRoot for Windows PowerShell compatibility.
+$scriptDir = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $PSScriptRoot
+}
+elseif ($MyInvocation.MyCommand.Path) {
+    Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+else {
+    (Get-Location).Path
+}
+$Root = Split-Path -Parent $scriptDir
 $AcrLogin = "$AcrName.azurecr.io"
 
 $BackendImage = "$AcrLogin/narrator-backend:$Tag"
