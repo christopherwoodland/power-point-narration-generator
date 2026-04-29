@@ -9,6 +9,7 @@ export async function fetchConfig(): Promise<AppConfig> {
       enable_quality_check: true,
       enable_ai_mode: true,
       enable_video_export: true,
+      default_single_pptx_mode: false,
       banner_message: '',
       tts_mode: 'standard',
       upload_files_message: '',
@@ -18,19 +19,30 @@ export async function fetchConfig(): Promise<AppConfig> {
 }
 
 export async function parseScript(formData: FormData): Promise<ParseResponse> {
-  const res = await fetch(`${BASE}/api/parse`, { method: 'POST', body: formData });
+  const res = await fetch(`${BASE}/api/parse`, {
+    method: 'POST',
+    body: formData,
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     const detail = Array.isArray(err.detail)
-      ? err.detail.map((e: { loc?: string[]; msg: string }) => `${e.loc?.join('.')} — ${e.msg}`).join('; ')
-      : err.detail ?? res.statusText;
+      ? err.detail
+          .map(
+            (e: { loc?: string[]; msg: string }) =>
+              `${e.loc?.join('.')} — ${e.msg}`,
+          )
+          .join('; ')
+      : (err.detail ?? res.statusText);
     throw new Error(detail);
   }
   return res.json();
 }
 
 export async function processNarration(formData: FormData): Promise<Blob> {
-  const res = await fetch(`${BASE}/api/process`, { method: 'POST', body: formData });
+  const res = await fetch(`${BASE}/api/process`, {
+    method: 'POST',
+    body: formData,
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail ?? res.statusText);
@@ -39,9 +51,12 @@ export async function processNarration(formData: FormData): Promise<Blob> {
 }
 
 export async function* streamAiGeneration(
-  formData: FormData
+  formData: FormData,
 ): AsyncGenerator<import('../types').ProgressEvent> {
-  const res = await fetch(`${BASE}/api/generate-ai`, { method: 'POST', body: formData });
+  const res = await fetch(`${BASE}/api/generate-ai`, {
+    method: 'POST',
+    body: formData,
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const reader = res.body!.getReader();
@@ -61,9 +76,12 @@ export async function* streamAiGeneration(
 }
 
 export async function* streamVideoExport(
-  formData: FormData
+  formData: FormData,
 ): AsyncGenerator<import('../types').ProgressEvent> {
-  const res = await fetch(`${BASE}/api/export-video`, { method: 'POST', body: formData });
+  const res = await fetch(`${BASE}/api/export-video`, {
+    method: 'POST',
+    body: formData,
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const reader = res.body!.getReader();
@@ -83,9 +101,12 @@ export async function* streamVideoExport(
 }
 
 export async function runQualityCheck(
-  formData: FormData
+  formData: FormData,
 ): Promise<QualityCheckResult[]> {
-  const res = await fetch(`${BASE}/api/quality-check`, { method: 'POST', body: formData });
+  const res = await fetch(`${BASE}/api/quality-check`, {
+    method: 'POST',
+    body: formData,
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail ?? res.statusText);
