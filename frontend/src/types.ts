@@ -25,6 +25,14 @@ export interface AppConfig {
   banner_message: string;
   upload_files_message: string;
   tts_mode: string;
+  // System-wide branding (from server)
+  app_name: string;
+  logo_url: string;
+  primary_color: string;
+  primary_color_dark: string;
+  primary_color_light: string;
+  accent_color: string;
+  enabled_voices: string[];
 }
 
 export interface ProgressEvent {
@@ -33,8 +41,8 @@ export interface ProgressEvent {
   total?: number;
   phase?: string;
   message?: string;
-  pptx?: string;   // base64
-  mp4?: string;    // base64
+  pptx?: string; // base64
+  mp4?: string; // base64
 }
 
 export type WizardStep = 1 | 2 | 3 | 4;

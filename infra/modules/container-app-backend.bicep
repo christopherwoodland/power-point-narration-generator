@@ -26,6 +26,7 @@ param azureDocIntelEndpoint string
 param appBannerMessage string
 param defaultSinglePptxMode bool
 param corsAllowedOrigins array = ['*']
+param brandingStorageVolumeName string
 
 var prefix = 'narrator-${environmentName}'
 var appName = '${prefix}-backend'
@@ -87,6 +88,13 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       ]
     }
     template: {
+      volumes: [
+        {
+          name: 'branding-vol'
+          storageName: brandingStorageVolumeName
+          storageType: 'AzureFile'
+        }
+      ]
       containers: [
         {
           name: 'backend'
@@ -95,6 +103,12 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
+          volumeMounts: [
+            {
+              volumeName: 'branding-vol'
+              mountPath: '/data'
+            }
+          ]
           env: [
             { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
@@ -111,6 +125,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_DOC_INTEL_ENDPOINT', value: azureDocIntelEndpoint }
             { name: 'APP_BANNER_MESSAGE', value: appBannerMessage }
             { name: 'DEFAULT_SINGLE_PPTX_MODE', value: string(defaultSinglePptxMode) }
+            { name: 'UI_BRANDING_PATH', value: '/data/ui-branding.json' }
             // Tell the C# app which managed identity client ID to use
             { name: 'AZURE_CLIENT_ID', value: identity.properties.clientId }
           ]

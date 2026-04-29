@@ -44,13 +44,14 @@ COPY --from=build /app .
 # debugging) has a place to write. Local Docker auth to Azure is generally
 # not supported on CA-restricted tenants — see README "Running with Docker
 # Compose". Use scripts/run.ps1 / run.sh on the host for local dev.
-RUN mkdir -p /azure-config \
-    && chown -R appuser:appgroup /app /azure-config
+RUN mkdir -p /azure-config /data \
+    && chown -R appuser:appgroup /app /azure-config /data
 USER appuser
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV AZURE_CONFIG_DIR=/azure-config
+ENV UI_BRANDING_PATH=/data/ui-branding.json
 # LibreOffice needs a writable HOME for its user profile when running headless
 ENV HOME=/tmp
 EXPOSE 8080

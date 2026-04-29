@@ -18,6 +18,7 @@ public class NarrationController : ControllerBase
     private readonly IAiPptxGeneratorService _aiGenerator;
     private readonly IQualityCheckerService _qualityChecker;
     private readonly IVideoExporterService _videoExporter;
+    private readonly IUiBrandingService _branding;
     private readonly AppOptions _opts;
     private readonly ILogger<NarrationController> _log;
 
@@ -33,6 +34,7 @@ public class NarrationController : ControllerBase
         IAiPptxGeneratorService aiGenerator,
         IQualityCheckerService qualityChecker,
         IVideoExporterService videoExporter,
+        IUiBrandingService branding,
         IOptions<AppOptions> opts,
         ILogger<NarrationController> log)
     {
@@ -44,6 +46,7 @@ public class NarrationController : ControllerBase
         _aiGenerator = aiGenerator;
         _qualityChecker = qualityChecker;
         _videoExporter = videoExporter;
+        _branding = branding;
         _opts = opts.Value;
         _log = log;
     }
@@ -51,16 +54,43 @@ public class NarrationController : ControllerBase
     // ── GET /api/config ───────────────────────────────────────────────────
 
     [HttpGet("config")]
-    public IActionResult GetConfig() => Ok(new
+    public IActionResult GetConfig()
     {
-        enable_quality_check = _opts.EnableQualityCheck,
-        enable_ai_mode = _opts.EnableAiMode,
-        enable_video_export = _opts.EnableVideoExport,
-        banner_message = _opts.AppBannerMessage,
-        upload_files_message = _opts.UploadFilesMessage,
-        tts_mode = _opts.AzureTtsMode,
-        default_single_pptx_mode = _opts.DefaultSinglePptxMode,
-    });
+        var b = _branding.Get();
+        return Ok(new
+        {
+            enable_quality_check = _opts.EnableQualityCheck,
+            enable_ai_mode = _opts.EnableAiMode,
+            enable_video_export = _opts.EnableVideoExport,
+            banner_message = _opts.AppBannerMessage,
+            upload_files_message = _opts.UploadFilesMessage,
+            tts_mode = _opts.AzureTtsMode,
+            default_single_pptx_mode = _opts.DefaultSinglePptxMode,
+            // System-wide branding
+            app_name = b.AppName,
+            logo_url = b.LogoUrl,
+            primary_color = b.PrimaryColor,
+            primary_color_dark = b.PrimaryColorDark,
+            primary_color_light = b.PrimaryColorLight,
+            accent_color = b.AccentColor,
+            enabled_voices = b.EnabledVoices,
+        });
+    }
+
+    // ── GET /api/admin/settings ───────────────────────────────────────────
+
+    [HttpGet("admin/settings")]
+    public IActionResult GetAdminSettings() => Ok(_branding.Get());
+
+    // ── POST /api/admin/settings ──────────────────────────────────────────
+
+    [HttpPost("admin/settings")]
+    public async Task<IActionResult> SaveAdminSettings([FromBody] UiBrandingSettings settings)
+    {
+        if (settings is null) return BadRequest("Settings body required.");
+        await _branding.SaveAsync(settings);
+        return Ok(_branding.Get());
+    }
 
     // ── POST /api/parse ───────────────────────────────────────────────────
 

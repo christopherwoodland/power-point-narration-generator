@@ -221,6 +221,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `AZURE_TENANT_ID` | *(blank)* | Pins `DefaultAzureCredential` to a specific tenant. Recommended in multi-tenant environments. |
 | `AZURE_CLIENT_ID` | *(blank)* | **Local Docker only** — service principal client ID for `EnvironmentCredential`. Leave blank in ACA (uses Managed Identity). |
 | `AZURE_CLIENT_SECRET` | *(blank)* | **Local Docker only** — service principal secret. Leave blank in ACA. |
+| `UI_BRANDING_PATH` | `<content root>/ui-branding.json` | File path for persisted UI branding settings (colors, logo, app name, voice list). In Docker/ACA, set to `/data/ui-branding.json` (mounted volume). |
 
 ### Frontend environment variables
 
@@ -236,6 +237,8 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 > **Note on transient Azure failures:** TTS, translation, and Speech token exchange use a small built-in retry policy for transient `408`, `429`, and `5xx` responses. `Retry-After` is honored when Azure provides it.
 
 > **Note on `appsettings.json`:** All backend values can also be set under the `App:` section of `backend-csharp/src/PptxNarrator.Api/appsettings.json` (see `appsettings.example.json`). Environment variables always win over `appsettings.json`.
+
+> **Note on UI branding:** App name, logo, colors, and voice restrictions are system-wide settings stored in `ui-branding.json` (configurable via `UI_BRANDING_PATH`). Changes made in the Admin panel apply to all users immediately. In Azure Container Apps, the file is persisted on an Azure File Share mounted at `/data`. In local dev, it's written next to the backend `.csproj`.
 
 ---
 
@@ -356,6 +359,7 @@ The app runs as two Azure Container Apps (frontend + backend) and uses managed i
 | Log Analytics Workspace | Yes (created by Bicep) | Container Apps logs and diagnostics |
 | Azure Container App (backend) | Yes (created by Bicep) | ASP.NET Core API workload |
 | Azure Container App (frontend) | Yes (created by Bicep) | React + Nginx UI workload |
+| Azure Storage Account + File Share | Yes (created by Bicep) | Persists system-wide UI branding settings across restarts |
 | User-assigned Managed Identities | Yes (created by Bicep) | Backend/frontend identity and ACR pull auth |
 | Azure AI / Cognitive Services resource | Yes | Speech TTS/STT and OpenAI endpoint access |
 | Azure OpenAI deployments | If AI mode enabled | Chat + image generation (for Step 3 AI mode) |

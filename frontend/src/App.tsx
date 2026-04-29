@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AppConfig, WizardState, WizardStep } from './types';
 import { fetchConfig } from './api/narrationApi';
+import { useAdmin } from './context/AdminContext';
 import Header from './components/Header';
 import StepIndicator from './components/StepIndicator';
 import Step1Upload from './pages/Step1Upload';
@@ -17,13 +18,20 @@ const DEFAULT_CONFIG: AppConfig = {
   upload_files_message:
     'Provide a narration script and (optionally) a PowerPoint to narrate.',
   tts_mode: 'standard',
+  app_name: 'GAO Text to Speech',
+  logo_url: '',
+  primary_color: '#004d2f',
+  primary_color_dark: '#003320',
+  primary_color_light: '#e6f4ee',
+  accent_color: '#007a4d',
+  enabled_voices: [],
 };
 
 const DEFAULT_STATE: WizardState = {
   step: 1,
   scriptFile: null,
   pptxFile: null,
-  voice: 'en-US-Grant:MAI-Voice-1',
+  voice: 'en-US-JennyNeural',
   aiMode: false,
   parsedSlides: [],
   pptxSlideCount: 0,
@@ -35,13 +43,29 @@ const DEFAULT_STATE: WizardState = {
 export default function App() {
   const [state, setState] = useState<WizardState>(DEFAULT_STATE);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
+  const { setTtsMode, loadSettings } = useAdmin();
 
   useEffect(() => {
     fetchConfig().then((cfg) => {
       setConfig(cfg);
-      setState((s) => ({ ...s, config: cfg }));
+      setTtsMode(cfg.tts_mode);
+      // Hydrate branding from server — makes settings system-wide (no save back)
+      loadSettings({
+        appName: cfg.app_name,
+        logoUrl: cfg.logo_url,
+        primaryColor: cfg.primary_color,
+        primaryColorDark: cfg.primary_color_dark,
+        primaryColorLight: cfg.primary_color_light,
+        accentColor: cfg.accent_color,
+        enabledVoices: cfg.enabled_voices,
+      });
+      const defaultVoice =
+        cfg.tts_mode === 'mai'
+          ? 'en-US-Grant:MAI-Voice-1'
+          : 'en-US-JennyNeural';
+      setState((s) => ({ ...s, config: cfg, voice: defaultVoice }));
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goTo = (step: WizardStep) => setState((s) => ({ ...s, step }));
 

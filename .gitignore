@@ -1,6 +1,7 @@
 # ── Secrets / local config ────────────────────────────────────────────────────
 .env
 backend-csharp/src/PptxNarrator.Api/appsettings.json
+ui-branding.json
 
 # ── .NET ──────────────────────────────────────────────────────────────────────
 [Bb]in/

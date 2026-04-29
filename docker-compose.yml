@@ -40,6 +40,8 @@ services:
       AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
       AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
       AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET:-}"
+    volumes:
+      - branding-data:/data
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
@@ -65,3 +67,6 @@ services:
     # Inject the backend URL into Nginx for runtime API path rewriting
     environment:
       BACKEND_URL: "http://backend:8080"
+
+volumes:
+  branding-data:
