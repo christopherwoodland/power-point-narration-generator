@@ -9,13 +9,13 @@
       "value": "prod"
     },
     "containerRegistryName": {
-      "value": "REPLACE_WITH_YOUR_ACR_NAME"
+      "value": "pptxnarratorcsjqkg"
     },
     "backendImage": {
-      "value": "REPLACE_WITH_YOUR_ACR_NAME.azurecr.io/narrator-backend:latest"
+      "value": "pptxnarratorcsjqkg.azurecr.io/narrator-backend:latest"
     },
     "frontendImage": {
-      "value": "REPLACE_WITH_YOUR_ACR_NAME.azurecr.io/narrator-frontend:latest"
+      "value": "pptxnarratorcsjqkg.azurecr.io/narrator-frontend:latest"
     },
     "enableQualityCheck": {
       "value": true
