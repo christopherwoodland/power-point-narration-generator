@@ -9,6 +9,7 @@ export async function fetchConfig(): Promise<AppConfig> {
       enable_quality_check: true,
       enable_ai_mode: true,
       enable_video_export: true,
+      default_single_pptx_mode: false,
       banner_message: '',
       tts_mode: 'standard',
       upload_files_message: '',
