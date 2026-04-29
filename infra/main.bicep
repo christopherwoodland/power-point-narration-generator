@@ -102,6 +102,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
     azureDocIntelEndpoint: azureDocIntelEndpoint
     appBannerMessage: appBannerMessage
     defaultSinglePptxMode: defaultSinglePptxMode
+    brandingStorageVolumeName: containerAppsEnv.outputs.storageVolumeName
   }
 }
 

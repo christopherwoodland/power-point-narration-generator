@@ -21,14 +21,16 @@ public class NarrationControllerTests
     private readonly Mock<IAiPptxGeneratorService> _aiGen = new();
     private readonly Mock<IQualityCheckerService> _qc = new();
     private readonly Mock<IVideoExporterService> _videoExporter = new();
+    private readonly Mock<IUiBrandingService> _branding = new();
 
     private NarrationController BuildController(AppOptions? opts = null)
     {
+        _branding.Setup(b => b.Get()).Returns(new UiBrandingSettings());
         var options = Options.Create(opts ?? new AppOptions());
         return new NarrationController(
             _wordParser.Object, _pptxParser.Object, _tts.Object,
             _translator.Object, _pptxBuilder.Object, _aiGen.Object,
-            _qc.Object, _videoExporter.Object, options, NullLogger<NarrationController>.Instance);
+            _qc.Object, _videoExporter.Object, _branding.Object, options, NullLogger<NarrationController>.Instance);
     }
 
     // ── GET /api/config ───────────────────────────────────────────────────

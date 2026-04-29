@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { saveAdminSettings } from '../api/narrationApi';
 
 export interface AdminSettings {
   appName: string;
@@ -10,7 +11,7 @@ export interface AdminSettings {
   enabledVoices: string[]; // voice value ids; empty array = all voices enabled
 }
 
-const DEFAULT_SETTINGS: AdminSettings = {
+export const DEFAULT_SETTINGS: AdminSettings = {
   appName: 'GAO Text to Speech',
   logoUrl: '',
   primaryColor: '#004d2f',
@@ -20,36 +21,30 @@ const DEFAULT_SETTINGS: AdminSettings = {
   enabledVoices: [],
 };
 
-const STORAGE_KEY = 'admin-settings';
-
-function loadSettings(): AdminSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_SETTINGS;
-}
-
 interface AdminContextValue {
   settings: AdminSettings;
-  updateSettings: (patch: Partial<AdminSettings>) => void;
-  resetSettings: () => void;
+  loadSettings: (s: AdminSettings) => void; // hydrate from server (no save)
+  updateSettings: (patch: Partial<AdminSettings>) => Promise<void>; // save to server
+  resetSettings: () => Promise<void>;
+  ttsMode: string;
+  setTtsMode: (mode: string) => void;
 }
 
 const AdminContext = createContext<AdminContextValue>({
   settings: DEFAULT_SETTINGS,
-  updateSettings: () => {},
-  resetSettings: () => {},
+  loadSettings: () => {},
+  updateSettings: async () => {},
+  resetSettings: async () => {},
+  ttsMode: 'standard',
+  setTtsMode: () => {},
 });
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<AdminSettings>(loadSettings);
+  const [settings, setSettings] = useState<AdminSettings>(DEFAULT_SETTINGS);
+  const [ttsMode, setTtsMode] = useState<string>('standard');
 
+  // Apply CSS custom properties whenever settings change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    // Apply CSS custom properties
     const root = document.documentElement;
     root.style.setProperty('--color-primary', settings.primaryColor);
     root.style.setProperty('--color-primary-dark', settings.primaryColorDark);
@@ -58,13 +53,30 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--color-accent', settings.accentColor);
   }, [settings]);
 
-  const updateSettings = (patch: Partial<AdminSettings>) =>
-    setSettings((s) => ({ ...s, ...patch }));
+  const loadSettings = (s: AdminSettings) => setSettings(s);
 
-  const resetSettings = () => setSettings(DEFAULT_SETTINGS);
+  const updateSettings = async (patch: Partial<AdminSettings>) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    await saveAdminSettings(next);
+  };
+
+  const resetSettings = async () => {
+    setSettings(DEFAULT_SETTINGS);
+    await saveAdminSettings(DEFAULT_SETTINGS);
+  };
 
   return (
-    <AdminContext.Provider value={{ settings, updateSettings, resetSettings }}>
+    <AdminContext.Provider
+      value={{
+        settings,
+        loadSettings,
+        updateSettings,
+        resetSettings,
+        ttsMode,
+        setTtsMode,
+      }}
+    >
       {children}
     </AdminContext.Provider>
   );

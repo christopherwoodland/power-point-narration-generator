@@ -71,6 +71,11 @@ builder.Services.AddSingleton<IAiPptxGeneratorService, AiPptxGeneratorService>()
 builder.Services.AddSingleton<IQualityCheckerService, QualityCheckerService>();
 builder.Services.AddSingleton<IVideoExporterService, VideoExporterService>();
 
+// ── UI Branding (system-wide, persisted to disk) ──────────────────────────
+var brandingPath = builder.Configuration["UI_BRANDING_PATH"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "ui-branding.json");
+builder.Services.AddSingleton<IUiBrandingService>(new UiBrandingService(brandingPath));
+
 // ── Application Insights (optional) ─────────────────────────────────────────
 var aiConnStr = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
     ?? builder.Configuration["ApplicationInsights:ConnectionString"];
