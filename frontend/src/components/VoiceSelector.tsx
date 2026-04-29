@@ -1,4 +1,5 @@
 import { VOICES } from '../data/voices';
+import { useAdmin } from '../context/AdminContext';
 
 interface Props {
   value: string;
@@ -8,8 +9,15 @@ interface Props {
 }
 
 export default function VoiceSelector({ value, onChange, disabled, ttsMode }: Props) {
+  const { settings } = useAdmin();
   const isMai = ttsMode === 'mai';
-  const filtered = isMai ? VOICES.filter(v => v.group === 'English (MAI)') : VOICES.filter(v => v.group !== 'English (MAI)');
+  let filtered = isMai ? VOICES.filter(v => v.group === 'English (MAI)') : VOICES.filter(v => v.group !== 'English (MAI)');
+
+  // Apply admin voice restrictions
+  if (settings.enabledVoices.length > 0) {
+    filtered = filtered.filter(v => settings.enabledVoices.includes(v.value));
+  }
+
   const groups = [...new Set(filtered.map(v => v.group))];
 
   return (

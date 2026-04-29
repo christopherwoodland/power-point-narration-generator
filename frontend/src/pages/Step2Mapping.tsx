@@ -5,11 +5,12 @@ import SlideMappingTable from '../components/SlideMappingTable';
 interface Props {
   state: WizardState;
   onMappingChange: (mapping: Record<number, number>) => void;
+  onSlideTextChange: (idx: number, text: string) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export default function Step2Mapping({ state, onMappingChange, onBack, onNext }: Props) {
+export default function Step2Mapping({ state, onMappingChange, onSlideTextChange, onBack, onNext }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => { panelRef.current?.focus(); }, []);
 
@@ -64,6 +65,7 @@ export default function Step2Mapping({ state, onMappingChange, onBack, onNext }:
           aiMode={aiMode}
           mapping={slideMapping}
           onChange={onMappingChange}
+          onSlideTextChange={onSlideTextChange}
         />
       </div>
 

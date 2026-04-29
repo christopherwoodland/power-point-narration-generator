@@ -54,6 +54,11 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
     fd.append('voice', state.voice);
     fd.append('slide_mapping', JSON.stringify(state.slideMapping));
 
+    // Send user-edited slide texts so TTS uses the modified narration
+    const slideTexts: Record<number, string> = {};
+    state.parsedSlides.forEach((s, i) => { slideTexts[i] = s.text; });
+    fd.append('slide_texts', JSON.stringify(slideTexts));
+
     setProgressLabel('Synthesising audio and embedding into slides…');
     setProgress(30);
 
@@ -112,6 +117,11 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
     fd.append('script', state.scriptFile!);
     fd.append('voice', state.voice);
 
+    // Send user-edited slide texts
+    const slideTexts: Record<number, string> = {};
+    state.parsedSlides.forEach((s, i) => { slideTexts[i] = s.text; });
+    fd.append('slide_texts', JSON.stringify(slideTexts));
+
     const total = state.parsedSlides.length;
     let slidesDone = 0;
 
@@ -164,17 +174,17 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
 
       {done && (
         <div className="done-wrap" data-testid="done-wrap">
-          <div className="done-hero">
+          <div className="done-hero done-hero--green">
             <div className="done-icon" aria-hidden="true">
               <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" fill="var(--color-violet-light)" />
-                <circle cx="32" cy="32" r="30" stroke="var(--color-violet-mid)" strokeWidth="1.5" strokeOpacity="0.4" />
-                <path d="M19 32l9 9 17-18" stroke="var(--color-violet)" strokeWidth="3.5"
+                <circle cx="32" cy="32" r="30" fill="var(--color-green-light)" />
+                <circle cx="32" cy="32" r="30" stroke="var(--color-green)" strokeWidth="1.5" strokeOpacity="0.4" />
+                <path d="M19 32l9 9 17-18" stroke="var(--color-green)" strokeWidth="3.5"
                   strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="done-hero-text">
-              <h3 className="done-title">Ready to download</h3>
+              <h3 className="done-title done-title--green">Ready to download</h3>
               <p className="done-subtitle">
                 Audio has been synthesised and embedded into each slide.
               </p>

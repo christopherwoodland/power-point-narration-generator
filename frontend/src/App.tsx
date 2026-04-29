@@ -52,7 +52,7 @@ export default function App() {
         <div className="env-banner" role="status">{config.banner_message}</div>
       )}
       <Header />
-      <StepIndicator current={state.step} showQualityCheck={config.enable_quality_check} />
+      <StepIndicator current={state.step} showQualityCheck={config.enable_quality_check} generateDone={state.resultBytes !== null} />
 
       <main id="main-content" className="main-content">
         {state.step === 1 && (
@@ -75,6 +75,14 @@ export default function App() {
           <Step2Mapping
             state={state}
             onMappingChange={mapping => setState(s => ({ ...s, slideMapping: mapping }))}
+            onSlideTextChange={(idx, text) =>
+              setState(s => ({
+                ...s,
+                parsedSlides: s.parsedSlides.map((slide, i) =>
+                  i === idx ? { ...slide, text } : slide
+                ),
+              }))
+            }
             onBack={() => goTo(1)}
             onNext={() => goTo(3)}
           />
