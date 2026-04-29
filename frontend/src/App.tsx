@@ -14,7 +14,8 @@ const DEFAULT_CONFIG: AppConfig = {
   enable_video_export: true,
   default_single_pptx_mode: false,
   banner_message: '',
-  upload_files_message: 'Provide a narration script and (optionally) a PowerPoint to narrate.',
+  upload_files_message:
+    'Provide a narration script and (optionally) a PowerPoint to narrate.',
   tts_mode: 'standard',
 };
 
@@ -36,33 +37,41 @@ export default function App() {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
 
   useEffect(() => {
-    fetchConfig().then(cfg => {
+    fetchConfig().then((cfg) => {
       setConfig(cfg);
-      setState(s => ({ ...s, config: cfg }));
+      setState((s) => ({ ...s, config: cfg }));
     });
   }, []);
 
-  const goTo = (step: WizardStep) => setState(s => ({ ...s, step }));
+  const goTo = (step: WizardStep) => setState((s) => ({ ...s, step }));
 
   const reset = () => setState({ ...DEFAULT_STATE, config });
 
   return (
     <div className="app-shell">
-      <a href="#main-content" className="skip-nav">Skip to main content</a>
+      <a href="#main-content" className="skip-nav">
+        Skip to main content
+      </a>
       {config.banner_message && (
-        <div className="env-banner" role="status">{config.banner_message}</div>
+        <div className="env-banner" role="status">
+          {config.banner_message}
+        </div>
       )}
       <Header />
-      <StepIndicator current={state.step} showQualityCheck={config.enable_quality_check} generateDone={state.resultBytes !== null} />
+      <StepIndicator
+        current={state.step}
+        showQualityCheck={config.enable_quality_check}
+        generateDone={state.resultBytes !== null}
+      />
 
       <main id="main-content" className="main-content">
         {state.step === 1 && (
           <Step1Upload
             state={state}
             config={config}
-            onChange={patch => setState(s => ({ ...s, ...patch }))}
+            onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
             onNext={(slides, pptxCount, mapping) =>
-              setState(s => ({
+              setState((s) => ({
                 ...s,
                 step: 2,
                 parsedSlides: slides,
@@ -75,12 +84,14 @@ export default function App() {
         {state.step === 2 && (
           <Step2Mapping
             state={state}
-            onMappingChange={mapping => setState(s => ({ ...s, slideMapping: mapping }))}
+            onMappingChange={(mapping) =>
+              setState((s) => ({ ...s, slideMapping: mapping }))
+            }
             onSlideTextChange={(idx, text) =>
-              setState(s => ({
+              setState((s) => ({
                 ...s,
                 parsedSlides: s.parsedSlides.map((slide, i) =>
-                  i === idx ? { ...slide, text } : slide
+                  i === idx ? { ...slide, text } : slide,
                 ),
               }))
             }
@@ -92,7 +103,9 @@ export default function App() {
           <Step3Generate
             state={state}
             config={config}
-            onResultReady={bytes => setState(s => ({ ...s, resultBytes: bytes }))}
+            onResultReady={(bytes) =>
+              setState((s) => ({ ...s, resultBytes: bytes }))
+            }
             onQualityCheck={() => goTo(4)}
             onRestart={reset}
           />

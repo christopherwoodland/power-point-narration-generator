@@ -8,16 +8,29 @@ interface Props {
   state: WizardState;
   config: AppConfig;
   onChange: (patch: Partial<WizardState>) => void;
-  onNext: (slides: SlideInfo[], pptxCount: number, mapping: Record<number, number>) => void;
+  onNext: (
+    slides: SlideInfo[],
+    pptxCount: number,
+    mapping: Record<number, number>,
+  ) => void;
 }
 
-export default function Step1Upload({ state, config, onChange, onNext }: Props) {
+export default function Step1Upload({
+  state,
+  config,
+  onChange,
+  onNext,
+}: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { panelRef.current?.focus(); }, []);
+  useEffect(() => {
+    panelRef.current?.focus();
+  }, []);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [singlePptxMode, setSinglePptxMode] = useState(config.default_single_pptx_mode);
+  const [singlePptxMode, setSinglePptxMode] = useState(
+    config.default_single_pptx_mode,
+  );
 
   useEffect(() => {
     setSinglePptxMode(config.default_single_pptx_mode);
@@ -64,9 +77,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
     <div ref={panelRef} tabIndex={-1} className="panel" data-testid="step-1">
       <div className="panel-header">
         <h2 className="panel-title">Upload your files</h2>
-        <p className="panel-subtitle">
-          {config.upload_files_message}
-        </p>
+        <p className="panel-subtitle">{config.upload_files_message}</p>
       </div>
 
       {config.enable_ai_mode && !singlePptxMode && (
@@ -77,7 +88,9 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
               className="toggle-input"
               data-testid="ai-mode-toggle"
               checked={state.aiMode}
-              onChange={e => onChange({ aiMode: e.target.checked, pptxFile: null })}
+              onChange={(e) =>
+                onChange({ aiMode: e.target.checked, pptxFile: null })
+              }
             />
             <span className="toggle-track" />
           </div>
@@ -98,7 +111,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
               className="toggle-input"
               data-testid="single-pptx-toggle"
               checked={singlePptxMode}
-              onChange={e => {
+              onChange={(e) => {
                 setSinglePptxMode(e.target.checked);
                 onChange({ scriptFile: null, pptxFile: null, aiMode: false });
               }}
@@ -108,7 +121,8 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
           <span className="toggle-label">
             <strong>Use slide text as narration</strong>
             <span className="toggle-hint">
-              Upload a single PowerPoint — each slide's text becomes the narration script
+              Upload a single PowerPoint — each slide's text becomes the
+              narration script
             </span>
           </span>
         </label>
@@ -122,7 +136,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
             accept=".pptx"
             file={state.pptxFile}
             testId="pptx-upload"
-            onFile={f => onChange({ pptxFile: f, scriptFile: null })}
+            onFile={(f) => onChange({ pptxFile: f, scriptFile: null })}
           />
         </div>
       ) : (
@@ -133,31 +147,39 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
             accept=".docx,.pptx"
             file={state.scriptFile}
             testId="script-upload"
-            onFile={f => onChange({ scriptFile: f })}
+            onFile={(f) => onChange({ scriptFile: f })}
           />
           <FileUploadCard
-            label={state.aiMode ? 'PowerPoint (optional)' : 'PowerPoint Presentation'}
-            hint={state.aiMode
-              ? 'AI will generate slides — or upload your own template'
-              : '.pptx — the presentation to narrate'}
+            label={
+              state.aiMode ? 'PowerPoint (optional)' : 'PowerPoint Presentation'
+            }
+            hint={
+              state.aiMode
+                ? 'AI will generate slides — or upload your own template'
+                : '.pptx — the presentation to narrate'
+            }
             accept=".pptx"
             file={state.pptxFile}
             disabled={state.aiMode && !state.pptxFile}
             testId="pptx-upload"
-            onFile={f => onChange({ pptxFile: f })}
+            onFile={(f) => onChange({ pptxFile: f })}
           />
         </div>
       )}
 
       <VoiceSelector
         value={state.voice}
-        onChange={v => onChange({ voice: v })}
+        onChange={(v) => onChange({ voice: v })}
         disabled={loading}
         ttsMode={config.tts_mode}
       />
 
       {error && (
-        <div className="alert alert--error" role="alert" data-testid="parse-error">
+        <div
+          className="alert alert--error"
+          role="alert"
+          data-testid="parse-error"
+        >
           {error}
         </div>
       )}
@@ -174,7 +196,9 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
               <span className="spinner" aria-hidden="true" /> Parsing…
             </>
           ) : (
-            <>Next: Review Slides<span aria-hidden="true"> →</span></>
+            <>
+              Next: Review Slides<span aria-hidden="true"> →</span>
+            </>
           )}
         </button>
       </div>
