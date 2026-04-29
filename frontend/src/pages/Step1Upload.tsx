@@ -19,6 +19,10 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
   const [loading, setLoading] = useState(false);
   const [singlePptxMode, setSinglePptxMode] = useState(config.default_single_pptx_mode);
 
+  useEffect(() => {
+    setSinglePptxMode(config.default_single_pptx_mode);
+  }, [config.default_single_pptx_mode]);
+
   const canProceed = singlePptxMode
     ? !!state.pptxFile
     : state.aiMode
@@ -162,7 +166,6 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
         <button
           className="btn btn--primary"
           disabled={!canProceed || loading}
-          aria-busy={loading ? 'true' : 'false'}
           data-testid="btn-next-step1"
           onClick={handleNext}
         >

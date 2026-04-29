@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "13143636148045444253"
+      "version": "0.42.1.51946",
+      "templateHash": "5376595577106441281"
     }
   },
   "parameters": {
@@ -93,6 +93,14 @@
         "description": "Azure Speech service region"
       }
     },
+    "azureTtsMaxParallelism": {
+      "type": "int",
+      "defaultValue": 4,
+      "minValue": 1,
+      "metadata": {
+        "description": "Max number of slide TTS operations to run concurrently"
+      }
+    },
     "azureOpenAiEndpoint": {
       "type": "string",
       "defaultValue": "",
@@ -127,6 +135,13 @@
       "metadata": {
         "description": "Optional banner message shown in the UI"
       }
+    },
+    "defaultSinglePptxMode": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Default the single-PPTX narration toggle to on in the UI"
+      }
     }
   },
   "resources": [
@@ -153,8 +168,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "9250339671604833330"
+              "version": "0.42.1.51946",
+              "templateHash": "6387182840563824389"
             }
           },
           "parameters": {
@@ -255,11 +270,17 @@
           "backendCorsAllowedOrigins": {
             "value": "[parameters('backendCorsAllowedOrigins')]"
           },
+          "corsAllowedOrigins": {
+            "value": "[parameters('backendCorsAllowedOrigins')]"
+          },
           "azureSpeechResourceName": {
             "value": "[parameters('azureSpeechResourceName')]"
           },
           "azureSpeechRegion": {
             "value": "[parameters('azureSpeechRegion')]"
+          },
+          "azureTtsMaxParallelism": {
+            "value": "[parameters('azureTtsMaxParallelism')]"
           },
           "azureOpenAiEndpoint": {
             "value": "[parameters('azureOpenAiEndpoint')]"
@@ -275,6 +296,9 @@
           },
           "appBannerMessage": {
             "value": "[parameters('appBannerMessage')]"
+          },
+          "defaultSinglePptxMode": {
+            "value": "[parameters('defaultSinglePptxMode')]"
           }
         },
         "template": {
@@ -283,8 +307,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "9129962556587507040"
+              "version": "0.42.1.51946",
+              "templateHash": "3415563668687485871"
             }
           },
           "parameters": {
@@ -324,6 +348,9 @@
             "azureSpeechRegion": {
               "type": "string"
             },
+            "azureTtsMaxParallelism": {
+              "type": "int"
+            },
             "azureOpenAiEndpoint": {
               "type": "string"
             },
@@ -338,6 +365,15 @@
             },
             "appBannerMessage": {
               "type": "string"
+            },
+            "defaultSinglePptxMode": {
+              "type": "bool"
+            },
+            "corsAllowedOrigins": {
+              "type": "array",
+              "defaultValue": [
+                "*"
+              ]
             }
           },
           "variables": {
@@ -354,7 +390,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('containerRegistryName'))]",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
               "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
@@ -434,12 +470,20 @@
                           "value": "[string(parameters('enableVideoExport'))]"
                         },
                         {
+                          "name": "CORS_ALLOWED_ORIGINS",
+                          "value": "[join(parameters('corsAllowedOrigins'), ',')]"
+                        },
+                        {
                           "name": "AZURE_SPEECH_RESOURCE_NAME",
                           "value": "[parameters('azureSpeechResourceName')]"
                         },
                         {
                           "name": "AZURE_SPEECH_REGION",
                           "value": "[parameters('azureSpeechRegion')]"
+                        },
+                        {
+                          "name": "AZURE_TTS_MAX_PARALLELISM",
+                          "value": "[string(parameters('azureTtsMaxParallelism'))]"
                         },
                         {
                           "name": "AZURE_OPENAI_ENDPOINT",
@@ -460,6 +504,10 @@
                         {
                           "name": "APP_BANNER_MESSAGE",
                           "value": "[parameters('appBannerMessage')]"
+                        },
+                        {
+                          "name": "DEFAULT_SINGLE_PPTX_MODE",
+                          "value": "[string(parameters('defaultSinglePptxMode'))]"
                         },
                         {
                           "name": "AZURE_CLIENT_ID",
@@ -556,8 +604,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "15745525817455063816"
+              "version": "0.42.1.51946",
+              "templateHash": "15186702120317648072"
             }
           },
           "parameters": {
@@ -594,7 +642,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('containerRegistryName'))]",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
               "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull-frontend')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",

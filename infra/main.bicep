@@ -67,6 +67,9 @@ param azureDocIntelEndpoint string = ''
 @description('Optional banner message shown in the UI')
 param appBannerMessage string = ''
 
+@description('Default the single-PPTX narration toggle to on in the UI')
+param defaultSinglePptxMode bool = false
+
 // ── Modules ───────────────────────────────────────────────────────────────────
 module containerAppsEnv 'modules/container-apps-env.bicep' = {
   name: 'containerAppsEnv'
@@ -98,6 +101,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
     azureImageDeployment: azureImageDeployment
     azureDocIntelEndpoint: azureDocIntelEndpoint
     appBannerMessage: appBannerMessage
+    defaultSinglePptxMode: defaultSinglePptxMode
   }
 }
 

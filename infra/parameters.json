@@ -55,6 +55,9 @@
     },
     "appBannerMessage": {
       "value": ""
+    },
+    "defaultSinglePptxMode": {
+      "value": false
     }
   }
 }
