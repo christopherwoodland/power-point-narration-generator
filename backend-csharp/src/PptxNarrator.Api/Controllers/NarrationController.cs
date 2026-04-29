@@ -59,6 +59,7 @@ public class NarrationController : ControllerBase
         banner_message = _opts.AppBannerMessage,
         upload_files_message = _opts.UploadFilesMessage,
         tts_mode = _opts.AzureTtsMode,
+        default_single_pptx_mode = _opts.DefaultSinglePptxMode,
     });
 
     // ── POST /api/parse ───────────────────────────────────────────────────
@@ -105,6 +106,7 @@ public class NarrationController : ControllerBase
         IFormFile pptx,
         [FromForm] string voice = "en-US-JennyNeural",
         [FromForm(Name = "slide_mapping")] string slideMappingJson = "{}",
+        [FromForm(Name = "slide_texts")] string? slideTextsJson = null,
         CancellationToken ct = default)
     {
         var scriptBytes = await ReadFormFileAsync(script);
@@ -113,6 +115,26 @@ public class NarrationController : ControllerBase
         IReadOnlyList<SlideInfo> slides;
         try { slides = ParseScript(script.FileName, scriptBytes); }
         catch (ArgumentException ex) { return UnprocessableEntity(new { detail = ex.Message }); }
+
+        // Apply user-edited texts if provided
+        if (!string.IsNullOrEmpty(slideTextsJson))
+        {
+            try
+            {
+                var editedTexts = JsonSerializer.Deserialize<Dictionary<int, string>>(slideTextsJson);
+                if (editedTexts is not null)
+                {
+                    var mutableSlides = slides.ToList();
+                    foreach (var (idx, text) in editedTexts)
+                    {
+                        if (idx >= 0 && idx < mutableSlides.Count)
+                            mutableSlides[idx] = mutableSlides[idx] with { Text = text };
+                    }
+                    slides = mutableSlides;
+                }
+            }
+            catch { /* ignore malformed JSON, fall back to original texts */ }
+        }
 
         int pptxSlideCount = CountPptxSlides(pptxBytes);
 
@@ -162,6 +184,7 @@ public class NarrationController : ControllerBase
     public async Task GenerateAi(
         IFormFile script,
         [FromForm] string voice = "en-US-JennyNeural",
+        [FromForm(Name = "slide_texts")] string? slideTextsJson = null,
         CancellationToken ct = default)
     {
         if (!_opts.EnableAiMode)
@@ -179,6 +202,26 @@ public class NarrationController : ControllerBase
             Response.StatusCode = 422;
             await Response.WriteAsync($"{{\"type\":\"error\",\"message\":{JsonSerializer.Serialize(ex.Message)}}}\n", ct);
             return;
+        }
+
+        // Apply user-edited texts if provided
+        if (!string.IsNullOrEmpty(slideTextsJson))
+        {
+            try
+            {
+                var editedTexts = JsonSerializer.Deserialize<Dictionary<int, string>>(slideTextsJson);
+                if (editedTexts is not null)
+                {
+                    var mutableSlides = slides.ToList();
+                    foreach (var (idx, text) in editedTexts)
+                    {
+                        if (idx >= 0 && idx < mutableSlides.Count)
+                            mutableSlides[idx] = mutableSlides[idx] with { Text = text };
+                    }
+                    slides = mutableSlides;
+                }
+            }
+            catch { /* ignore malformed JSON, fall back to original texts */ }
         }
 
         Response.ContentType = "application/x-ndjson";

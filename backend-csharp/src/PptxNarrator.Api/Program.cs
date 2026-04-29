@@ -30,6 +30,7 @@ builder.Services.Configure<AppOptions>(opts =>
         builder.Configuration.GetValue("AZURE_TTS_MAX_PARALLELISM", opts.TtsMaxParallelism));
     opts.AzureDocIntelEndpoint = builder.Configuration["AZURE_DOC_INTEL_ENDPOINT"]
         ?? opts.AzureDocIntelEndpoint;
+    opts.DefaultSinglePptxMode = builder.Configuration.GetValue("DEFAULT_SINGLE_PPTX_MODE", false);
     opts.AppBannerMessage = builder.Configuration["APP_BANNER_MESSAGE"] ?? "";
     opts.UploadFilesMessage = builder.Configuration["UPLOAD_FILES_MESSAGE"]
         ?? opts.UploadFilesMessage;

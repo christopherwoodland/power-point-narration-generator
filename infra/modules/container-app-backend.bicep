@@ -24,6 +24,7 @@ param azureOpenAiDeployment string
 param azureImageDeployment string
 param azureDocIntelEndpoint string
 param appBannerMessage string
+param defaultSinglePptxMode bool
 param corsAllowedOrigins array = ['*']
 
 var prefix = 'narrator-${environmentName}'
@@ -109,6 +110,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_IMAGE_DEPLOYMENT', value: azureImageDeployment }
             { name: 'AZURE_DOC_INTEL_ENDPOINT', value: azureDocIntelEndpoint }
             { name: 'APP_BANNER_MESSAGE', value: appBannerMessage }
+            { name: 'DEFAULT_SINGLE_PPTX_MODE', value: string(defaultSinglePptxMode) }
             // Tell the C# app which managed identity client ID to use
             { name: 'AZURE_CLIENT_ID', value: identity.properties.clientId }
           ]

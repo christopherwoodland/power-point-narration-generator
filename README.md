@@ -203,6 +203,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `ENABLE_QUALITY_CHECK` | `false` | Toggle Step 4 (STT round-trip quality check). |
 | `ENABLE_AI_MODE` | `false` | Toggle AI slide generation (Step 1 AI mode). Requires Azure OpenAI. |
 | `ENABLE_VIDEO_EXPORT` | `false` | Toggle MP4 export. Requires `ffmpeg` (and PowerPoint COM on Windows / LibreOffice on Linux). |
+| `DEFAULT_SINGLE_PPTX_MODE` | `false` | When `true`, Step 1 defaults to the single-PPTX flow where one PowerPoint is used as both the narration source and the presentation target. |
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed origins for the backend API. Set to your frontend URL in production. |
 | `AZURE_SPEECH_RESOURCE_NAME` | `bhs-development-public-foundry-r` | Cognitive Services / Foundry resource name used for TTS + STT. |
 | `AZURE_SPEECH_REGION` | `eastus2` | Region of the Speech resource. |
@@ -242,7 +243,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 
 The 4-step wizard guides you through:
 
-1. **Upload** — provide a Word (`.docx`) or PPTX (`.pptx`) script, your target PowerPoint deck, choose a voice, and optionally enable AI mode.
+1. **Upload** — provide a Word (`.docx`) or PPTX (`.pptx`) script and a target PowerPoint deck, or enable the single-PPTX flow to use one PowerPoint as both the narration source and the presentation target. Choose a voice, and optionally enable AI mode.
 2. **Map slides** — verify the script-to-slide mapping (reorder if needed).
 3. **Generate** — watch real-time progress as audio is synthesized in bounded parallel per slide and embedded, then download the narrated `.pptx`. Generation only completes successfully when all required slide narrations succeed. Optionally export to `.mp4`.
 4. **Quality check** — optional STT-based pass that estimates comprehension confidence per slide and flags any unclear words.

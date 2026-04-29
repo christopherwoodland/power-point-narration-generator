@@ -53,6 +53,8 @@ public class AppOptions
         "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/";
 
     // ── UI ──────────────────────────────────────────────────────────────────
+    /// <summary>When true, the "Use slide text as narration" toggle defaults to on. Env: DEFAULT_SINGLE_PPTX_MODE</summary>
+    public bool DefaultSinglePptxMode { get; set; } = false;
     public string AppBannerMessage { get; set; } = "";
     public string UploadFilesMessage { get; set; } = "Provide a narration script and (optionally) a PowerPoint to narrate.";
 

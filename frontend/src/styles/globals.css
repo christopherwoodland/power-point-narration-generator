@@ -339,6 +339,10 @@ body {
   gap: 16px;
   margin-bottom: 20px;
 }
+.upload-grid--single {
+  grid-template-columns: 1fr;
+  max-width: 480px;
+}
 
 @media (max-width: 580px) {
   .upload-grid { grid-template-columns: 1fr; }
@@ -541,6 +545,25 @@ body {
 .td-issues li { margin-bottom: 3px; color: var(--color-red); font-size: .83rem; }
 .issue-none { color: var(--color-green); font-size: .83rem; }
 
+.preview-edit {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: .83rem;
+  color: var(--color-text);
+  background: #fff;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color .15s;
+}
+.preview-edit:focus {
+  outline: 2px solid var(--color-violet);
+  outline-offset: 1px;
+  border-color: var(--color-violet);
+}
+
 .mapping-select {
   width: 100%;
   padding: 6px 8px;
@@ -692,3 +715,204 @@ body {
 .badge--green { background: var(--color-green-light); color: var(--color-green); }
 .badge--yellow { background: var(--color-yellow-light); color: var(--color-yellow); }
 .badge--red { background: var(--color-red-light); color: var(--color-red); }
+
+/* ── Header extras ────────────────────────────────────────────────────────── */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-logo-img {
+  height: 32px;
+  width: auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+.admin-gear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.admin-gear-btn:hover { background: var(--color-surface-raised); color: var(--color-text); }
+.admin-gear-btn:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 2px; }
+
+/* ── Step circle green completed ──────────────────────────────────────────── */
+.step-circle--green {
+  background: var(--color-green) !important;
+  border-color: var(--color-green) !important;
+  color: #fff !important;
+}
+
+/* ── Done hero green variant ──────────────────────────────────────────────── */
+.done-hero--green {
+  background: linear-gradient(135deg, var(--color-green-light) 0%, #f0fdf4 100%);
+  border-color: var(--color-green);
+}
+.done-title--green {
+  color: var(--color-green) !important;
+}
+
+/* ── Admin Panel ──────────────────────────────────────────────────────────── */
+.admin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.admin-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-title { font-size: 1.15rem; font-weight: 700; }
+.admin-close { padding: 4px 8px; font-size: 1.1rem; }
+.admin-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.admin-field { display: flex; flex-direction: column; gap: 6px; }
+.admin-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: .9rem;
+  color: var(--color-text);
+  background: #fff;
+  transition: border-color .15s;
+}
+.admin-input:focus { outline: 2px solid var(--color-violet); outline-offset: 1px; border-color: var(--color-violet); }
+.admin-logo-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.admin-logo-preview img {
+  height: 40px;
+  width: auto;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+.admin-color-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.admin-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-color-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 2px;
+}
+.admin-color-hex {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  color: var(--color-text-muted);
+}
+.admin-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
+  gap: 10px;
+}
+
+/* ── Admin Voice Configuration ────────────────────────────────────────────── */
+.admin-section { display: flex; flex-direction: column; gap: 10px; }
+.admin-section-title { font-size: 1rem; font-weight: 700; }
+.admin-section-hint { font-size: .82rem; color: var(--color-text-muted); }
+.admin-voice-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-voice-toolbar .admin-input { flex: 1; }
+.btn--sm { padding: 5px 10px; font-size: .78rem; }
+.admin-voice-list {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.admin-voice-group { display: flex; flex-direction: column; gap: 2px; }
+.admin-voice-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  font-size: .85rem;
+  cursor: pointer;
+  user-select: none;
+}
+.admin-voice-count {
+  margin-left: auto;
+  font-size: .75rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.admin-voice-items {
+  display: flex;
+  flex-direction: column;
+  padding-left: 24px;
+}
+.admin-voice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  font-size: .83rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  user-select: none;
+}
+.admin-voice-item:hover { background: var(--color-bg); }
+.admin-voice-summary {
+  font-size: .82rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}

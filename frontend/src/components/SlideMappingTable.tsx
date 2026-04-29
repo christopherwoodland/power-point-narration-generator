@@ -6,6 +6,7 @@ interface Props {
   aiMode: boolean;
   mapping: Record<number, number>;
   onChange: (mapping: Record<number, number>) => void;
+  onSlideTextChange: (idx: number, text: string) => void;
 }
 
 function escapeHtml(str: string) {
@@ -16,7 +17,7 @@ function escapeHtml(str: string) {
     .replace(/"/g, '&quot;');
 }
 
-export default function SlideMappingTable({ slides, pptxSlideCount, aiMode, mapping, onChange }: Props) {
+export default function SlideMappingTable({ slides, pptxSlideCount, aiMode, mapping, onChange, onSlideTextChange }: Props) {
   const handleChange = (wordIdx: number, pptxIdx: number) => {
     onChange({ ...mapping, [wordIdx]: pptxIdx });
   };
@@ -37,9 +38,13 @@ export default function SlideMappingTable({ slides, pptxSlideCount, aiMode, mapp
               <td className="td-num">{idx + 1}</td>
               <td className="td-title">{escapeHtml(slide.title)}</td>
               <td className="td-preview">
-                {slide.text.length > 220
-                  ? slide.text.substring(0, 220) + '…'
-                  : slide.text}
+                <textarea
+                  className="preview-edit"
+                  value={slide.text}
+                  rows={3}
+                  aria-label={`Narration text for slide ${idx + 1}`}
+                  onChange={e => onSlideTextChange(idx, e.target.value)}
+                />
               </td>
             </tr>
           ))}
@@ -66,9 +71,13 @@ export default function SlideMappingTable({ slides, pptxSlideCount, aiMode, mapp
               <td className="td-num">{wordIdx + 1}</td>
               <td className="td-title">{escapeHtml(slide.title)}</td>
               <td className="td-preview">
-                {slide.text.length > 180
-                  ? slide.text.substring(0, 180) + '…'
-                  : slide.text}
+                <textarea
+                  className="preview-edit"
+                  value={slide.text}
+                  rows={3}
+                  aria-label={`Narration text for slide ${wordIdx + 1}`}
+                  onChange={e => onSlideTextChange(wordIdx, e.target.value)}
+                />
               </td>
               <td className="td-mapping">
                 <select
