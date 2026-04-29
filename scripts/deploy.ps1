@@ -190,7 +190,7 @@ Write-Step 3 "Deploy Bicep template (infra/main.bicep)"
 $deployment = az deployment group create `
     --resource-group $ResourceGroup `
     --template-file (Join-Path $Root "infra\main.bicep") `
-    --parameters "@$paramFile" `
+    --parameters $paramFile `
     --parameters containerRegistryName=$AcrName `
     backendImage=$BackendImage `
     frontendImage=$FrontendImage `
