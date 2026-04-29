@@ -7,7 +7,7 @@ export interface AdminSettings {
   primaryColorDark: string;
   primaryColorLight: string;
   accentColor: string;
-  enabledVoices: string[];   // voice value ids; empty array = all voices enabled
+  enabledVoices: string[]; // voice value ids; empty array = all voices enabled
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
@@ -26,7 +26,9 @@ function loadSettings(): AdminSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_SETTINGS;
 }
 
@@ -52,11 +54,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--color-primary', settings.primaryColor);
     root.style.setProperty('--color-primary-dark', settings.primaryColorDark);
     root.style.setProperty('--color-primary-light', settings.primaryColorLight);
+    root.style.setProperty('--color-primary-mid', settings.accentColor);
     root.style.setProperty('--color-accent', settings.accentColor);
   }, [settings]);
 
   const updateSettings = (patch: Partial<AdminSettings>) =>
-    setSettings(s => ({ ...s, ...patch }));
+    setSettings((s) => ({ ...s, ...patch }));
 
   const resetSettings = () => setSettings(DEFAULT_SETTINGS);
 
