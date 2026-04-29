@@ -339,6 +339,10 @@ body {
   gap: 16px;
   margin-bottom: 20px;
 }
+.upload-grid--single {
+  grid-template-columns: 1fr;
+  max-width: 480px;
+}
 
 @media (max-width: 580px) {
   .upload-grid { grid-template-columns: 1fr; }

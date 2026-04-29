@@ -17,18 +17,31 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [singlePptxMode, setSinglePptxMode] = useState(config.default_single_pptx_mode);
 
-  const canProceed = state.aiMode ? !!state.scriptFile : !!(state.scriptFile && state.pptxFile);
+  const canProceed = singlePptxMode
+    ? !!state.pptxFile
+    : state.aiMode
+      ? !!state.scriptFile
+      : !!(state.scriptFile && state.pptxFile);
 
   const handleNext = async () => {
-    if (!state.scriptFile) return;
     setError('');
     setLoading(true);
 
     const fd = new FormData();
-    fd.append('script', state.scriptFile);
-    if (!state.aiMode && state.pptxFile) fd.append('pptx', state.pptxFile);
-    fd.append('ai_mode', state.aiMode ? 'true' : 'false');
+
+    if (singlePptxMode) {
+      // Use the PPTX as both script source and presentation target
+      fd.append('script', state.pptxFile!);
+      fd.append('pptx', state.pptxFile!);
+      fd.append('ai_mode', 'false');
+    } else {
+      if (!state.scriptFile) return;
+      fd.append('script', state.scriptFile);
+      if (!state.aiMode && state.pptxFile) fd.append('pptx', state.pptxFile);
+      fd.append('ai_mode', state.aiMode ? 'true' : 'false');
+    }
 
     try {
       const data = await parseScript(fd);
@@ -52,7 +65,7 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
         </p>
       </div>
 
-      {config.enable_ai_mode && (
+      {config.enable_ai_mode && !singlePptxMode && (
         <label className="toggle-row">
           <div className="toggle-wrap">
             <input
@@ -73,27 +86,64 @@ export default function Step1Upload({ state, config, onChange, onNext }: Props) 
         </label>
       )}
 
-      <div className="upload-grid">
-        <FileUploadCard
-          label="Narration Script"
-          hint=".docx or .pptx — use Heading 1 as slide delimiters"
-          accept=".docx,.pptx"
-          file={state.scriptFile}
-          testId="script-upload"
-          onFile={f => onChange({ scriptFile: f })}
-        />
-        <FileUploadCard
-          label={state.aiMode ? 'PowerPoint (optional)' : 'PowerPoint Presentation'}
-          hint={state.aiMode
-            ? 'AI will generate slides — or upload your own template'
-            : '.pptx — the presentation to narrate'}
-          accept=".pptx"
-          file={state.pptxFile}
-          disabled={state.aiMode && !state.pptxFile}
-          testId="pptx-upload"
-          onFile={f => onChange({ pptxFile: f })}
-        />
-      </div>
+      {!state.aiMode && (
+        <label className="toggle-row">
+          <div className="toggle-wrap">
+            <input
+              type="checkbox"
+              className="toggle-input"
+              data-testid="single-pptx-toggle"
+              checked={singlePptxMode}
+              onChange={e => {
+                setSinglePptxMode(e.target.checked);
+                onChange({ scriptFile: null, pptxFile: null, aiMode: false });
+              }}
+            />
+            <span className="toggle-track" />
+          </div>
+          <span className="toggle-label">
+            <strong>Use slide text as narration</strong>
+            <span className="toggle-hint">
+              Upload a single PowerPoint — each slide's text becomes the narration script
+            </span>
+          </span>
+        </label>
+      )}
+
+      {singlePptxMode ? (
+        <div className="upload-grid upload-grid--single">
+          <FileUploadCard
+            label="PowerPoint Presentation"
+            hint=".pptx — slide text will be used as narration script"
+            accept=".pptx"
+            file={state.pptxFile}
+            testId="pptx-upload"
+            onFile={f => onChange({ pptxFile: f, scriptFile: null })}
+          />
+        </div>
+      ) : (
+        <div className="upload-grid">
+          <FileUploadCard
+            label="Narration Script"
+            hint=".docx or .pptx — use Heading 1 as slide delimiters"
+            accept=".docx,.pptx"
+            file={state.scriptFile}
+            testId="script-upload"
+            onFile={f => onChange({ scriptFile: f })}
+          />
+          <FileUploadCard
+            label={state.aiMode ? 'PowerPoint (optional)' : 'PowerPoint Presentation'}
+            hint={state.aiMode
+              ? 'AI will generate slides — or upload your own template'
+              : '.pptx — the presentation to narrate'}
+            accept=".pptx"
+            file={state.pptxFile}
+            disabled={state.aiMode && !state.pptxFile}
+            testId="pptx-upload"
+            onFile={f => onChange({ pptxFile: f })}
+          />
+        </div>
+      )}
 
       <VoiceSelector
         value={state.voice}

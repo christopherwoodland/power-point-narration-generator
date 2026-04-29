@@ -49,7 +49,9 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
 
   const runStandardMode = async () => {
     const fd = new FormData();
-    fd.append('script', state.scriptFile!);
+    // In single-PPTX mode, scriptFile is null; use pptxFile as both script and presentation
+    const scriptSource = state.scriptFile ?? state.pptxFile!;
+    fd.append('script', scriptSource);
     fd.append('pptx', state.pptxFile!);
     fd.append('voice', state.voice);
     fd.append('slide_mapping', JSON.stringify(state.slideMapping));

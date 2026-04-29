@@ -59,6 +59,7 @@ public class NarrationController : ControllerBase
         banner_message = _opts.AppBannerMessage,
         upload_files_message = _opts.UploadFilesMessage,
         tts_mode = _opts.AzureTtsMode,
+        default_single_pptx_mode = _opts.DefaultSinglePptxMode,
     });
 
     // ── POST /api/parse ───────────────────────────────────────────────────
