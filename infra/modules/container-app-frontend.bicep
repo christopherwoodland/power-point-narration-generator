@@ -4,12 +4,16 @@
 
 param location string
 param environmentName string
+
+@description('Optional suffix appended to every resource name (e.g. "v2"). Leave blank for no suffix.')
+param resourceSuffix string = ''
+
 param containerAppsEnvironmentId string
 param containerRegistryName string
 param frontendImage string
 param backendUrl string
 
-var prefix = 'narrator-${environmentName}'
+var prefix = 'narrator-${environmentName}${empty(resourceSuffix) ? '' : '-${resourceSuffix}'}'
 var appName = '${prefix}-frontend'
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {

@@ -36,6 +36,10 @@
     Optional override for AZURE_TTS_MAX_PARALLELISM passed to the backend Container App.
     Defaults to azureTtsMaxParallelism from infra/parameters.json, or 4 if omitted there.
 
+.PARAMETER ResourceSuffix
+    Optional short suffix appended to all deployed resource names.
+    If omitted, uses infra/parameters.json -> resourceSuffix.
+
 .PARAMETER SkipRoleAssignment
     Skip automatic assignment of the backend managed identity role on Azure AI/Cognitive Services.
 
@@ -47,6 +51,9 @@
 
 .EXAMPLE
     .\deploy.ps1 -ResourceGroup my-rg -AcrName myacr -TtsMaxParallelism 6
+
+.EXAMPLE
+    .\deploy.ps1 -ResourceGroup my-rg -AcrName myacr -ResourceSuffix blue -AiResourceGroup my-ai-rg -AiResourceName my-ai-account
 #>
 param(
     [Parameter(Mandatory)]
@@ -60,6 +67,7 @@ param(
     [string] $AiResourceName = "",
     [string] $AiResourceGroup = "",
     [int] $TtsMaxParallelism = 0,
+    [string] $ResourceSuffix = "",
     [switch] $SkipRoleAssignment
 )
 
@@ -143,7 +151,18 @@ else {
     4
 }
 
+$resolvedResourceSuffix = if (-not [string]::IsNullOrWhiteSpace($ResourceSuffix)) {
+    $ResourceSuffix
+}
+elseif ($null -ne $paramJson.parameters.resourceSuffix) {
+    [string]$paramJson.parameters.resourceSuffix.value
+}
+else {
+    ""
+}
+
 Write-Host "  TTS Parallelism: $resolvedTtsMaxParallelism"
+Write-Host "  Resource Suffix: $resolvedResourceSuffix"
 
 # ── Build & push backend ──────────────────────────────────────────────────────
 Write-Step 1 "Build + push backend image"
@@ -187,14 +206,23 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Frontend build/push failed."; exit 1 }
 # ── Bicep deployment ──────────────────────────────────────────────────────────
 Write-Step 3 "Deploy Bicep template (infra/main.bicep)"
 
+# Build additional parameters list; skip resourceSuffix when empty to avoid
+# az CLI argument-parsing error with bare 'resourceSuffix=' token.
+$extraParams = @(
+    "containerRegistryName=$AcrName",
+    "backendImage=$BackendImage",
+    "frontendImage=$FrontendImage",
+    "azureTtsMaxParallelism=$resolvedTtsMaxParallelism"
+)
+if (-not [string]::IsNullOrWhiteSpace($resolvedResourceSuffix)) {
+    $extraParams += "resourceSuffix=$resolvedResourceSuffix"
+}
+
 $deployment = az deployment group create `
     --resource-group $ResourceGroup `
     --template-file (Join-Path $Root "infra\main.bicep") `
     --parameters $paramFile `
-    --parameters containerRegistryName=$AcrName `
-    backendImage=$BackendImage `
-    frontendImage=$FrontendImage `
-    azureTtsMaxParallelism=$resolvedTtsMaxParallelism `
+    --parameters $extraParams `
     --output json | ConvertFrom-Json
 
 if ($LASTEXITCODE -ne 0) { Write-Error "Bicep deployment failed."; exit 1 }
@@ -211,7 +239,8 @@ if ($outputs) {
 Write-Step 4 "Ensure frontend BACKEND_URL is configured"
 
 $backendUrl = $outputs.backendUrl.value
-$frontendAppName = "narrator-$environmentName-frontend"
+$suffixPart = if ([string]::IsNullOrWhiteSpace($resolvedResourceSuffix)) { "" } else { "-$resolvedResourceSuffix" }
+$frontendAppName = "narrator-$environmentName$suffixPart-frontend"
 if (-not [string]::IsNullOrWhiteSpace($backendUrl)) {
     az containerapp update `
         --resource-group $ResourceGroup `
@@ -232,7 +261,7 @@ else {
 
 # Assign backend managed identity role for Azure AI/Cognitive Services access.
 if (-not $SkipRoleAssignment) {
-    Write-Step 5 "Assign backend identity role on Azure AI/Cognitive Services"
+    Write-Step 5 "Assign backend identity roles on Azure AI/Cognitive Services"
 
     $backendPrincipalId = $outputs.backendIdentityPrincipalId.value
     if ([string]::IsNullOrWhiteSpace($backendPrincipalId)) {
@@ -251,29 +280,36 @@ if (-not $SkipRoleAssignment) {
             Write-Warning "Could not resolve Azure AI resource scope for '$resolvedAiResourceName' in '$resolvedAiResourceGroup'."
         }
         else {
-            $existingRoleId = az role assignment list `
-                --assignee-object-id $backendPrincipalId `
-                --scope $aiScope `
-                --role "Cognitive Services User" `
-                --query "[0].id" -o tsv
+            $requiredRoles = @(
+                "Cognitive Services User",
+                "Cognitive Services OpenAI User"
+            )
 
-            if ([string]::IsNullOrWhiteSpace($existingRoleId)) {
-                az role assignment create `
+            foreach ($roleName in $requiredRoles) {
+                $existingRoleId = az role assignment list `
                     --assignee-object-id $backendPrincipalId `
-                    --assignee-principal-type ServicePrincipal `
-                    --role "Cognitive Services User" `
                     --scope $aiScope `
-                    --only-show-errors | Out-Null
+                    --role $roleName `
+                    --query "[0].id" -o tsv
 
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "  Assigned 'Cognitive Services User' to backend managed identity." -ForegroundColor Green
+                if ([string]::IsNullOrWhiteSpace($existingRoleId)) {
+                    az role assignment create `
+                        --assignee-object-id $backendPrincipalId `
+                        --assignee-principal-type ServicePrincipal `
+                        --role $roleName `
+                        --scope $aiScope `
+                        --only-show-errors | Out-Null
+
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "  Assigned '$roleName' to backend managed identity." -ForegroundColor Green
+                    }
+                    else {
+                        Write-Warning "Automatic role assignment for '$roleName' failed. Ensure deployer has roleAssignments/write (Owner or User Access Administrator)."
+                    }
                 }
                 else {
-                    Write-Warning "Automatic role assignment failed. Ensure deployer has roleAssignments/write (Owner or User Access Administrator)."
+                    Write-Host "  Backend identity already has '$roleName' on Azure AI resource." -ForegroundColor Green
                 }
-            }
-            else {
-                Write-Host "  Backend identity already has 'Cognitive Services User' on Azure AI resource." -ForegroundColor Green
             }
         }
     }

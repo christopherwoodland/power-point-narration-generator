@@ -71,10 +71,27 @@ builder.Services.AddSingleton<IAiPptxGeneratorService, AiPptxGeneratorService>()
 builder.Services.AddSingleton<IQualityCheckerService, QualityCheckerService>();
 builder.Services.AddSingleton<IVideoExporterService, VideoExporterService>();
 
-// ── UI Branding (system-wide, persisted to disk) ──────────────────────────
-var brandingPath = builder.Configuration["UI_BRANDING_PATH"]
-    ?? Path.Combine(builder.Environment.ContentRootPath, "ui-branding.json");
-builder.Services.AddSingleton<IUiBrandingService>(new UiBrandingService(brandingPath));
+// ── UI Branding (system-wide, persisted to Azure Blob or local disk) ─────────
+// Production (ACA): set AZURE_BRANDING_STORAGE_ACCOUNT → uses Blob Storage via
+//   DefaultAzureCredential (Managed Identity). No storage account keys required.
+// Local dev: leave AZURE_BRANDING_STORAGE_ACCOUNT blank → falls back to file on disk.
+var brandingStorageAccount = builder.Configuration["AZURE_BRANDING_STORAGE_ACCOUNT"];
+if (!string.IsNullOrWhiteSpace(brandingStorageAccount))
+{
+    var brandingContainer = builder.Configuration["AZURE_BRANDING_CONTAINER"] ?? "branding-data";
+    builder.Services.AddSingleton<IUiBrandingService>(sp =>
+        new UiBrandingBlobService(
+            brandingStorageAccount,
+            brandingContainer,
+            sp.GetRequiredService<Azure.Core.TokenCredential>()));
+}
+else
+{
+    // Local dev fallback: write branding JSON to disk beside the binary
+    var brandingPath = builder.Configuration["UI_BRANDING_PATH"]
+        ?? Path.Combine(builder.Environment.ContentRootPath, "ui-branding.json");
+    builder.Services.AddSingleton<IUiBrandingService>(new UiBrandingService(brandingPath));
+}
 
 // ── Application Insights (optional) ─────────────────────────────────────────
 var aiConnStr = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]

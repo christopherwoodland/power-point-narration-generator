@@ -40,6 +40,7 @@ Upload your script and an existing PowerPoint deck, map slides, and the tool syn
 | Containers | Docker + Docker Compose |
 | Dev Container | VS Code Dev Container (Ubuntu 24.04 + .NET 10 + Node 20 + Azure CLI + FFmpeg) |
 | IaC | Azure Bicep (Container Apps) |
+| Branding storage | Azure Blob Storage (`Storage Blob Data Contributor` via Managed Identity — no keys) |
 
 ---
 
@@ -216,12 +217,14 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `AZURE_IMAGE_DEPLOYMENT` | `MAI-Image-2e` | Image deployment name. |
 | `AZURE_DOC_INTEL_ENDPOINT` | `https://bhs-development-public-foundry-r.cognitiveservices.azure.com/` | Optional Document Intelligence endpoint for OCR fallback in PPTX parsing. Leave blank to skip. |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | *(blank)* | Enables Application Insights telemetry when set. App Insights is skipped when blank — no error. |
+| `AZURE_BRANDING_STORAGE_ACCOUNT` | *(blank)* | Storage account name for Blob-backed UI branding. In ACA this is set by Bicep. Leave blank locally to use file fallback. |
+| `AZURE_BRANDING_CONTAINER` | `branding-data` | Blob container name for UI branding JSON. |
 | `APP_BANNER_MESSAGE` | *(blank)* | Optional banner text rendered at the top of the UI. |
 | `UPLOAD_FILES_MESSAGE` | `Provide a narration script and (optionally) a PowerPoint to narrate.` | Optional Step 1 helper text shown under "Upload your files". |
 | `AZURE_TENANT_ID` | *(blank)* | Pins `DefaultAzureCredential` to a specific tenant. Recommended in multi-tenant environments. |
 | `AZURE_CLIENT_ID` | *(blank)* | **Local Docker only** — service principal client ID for `EnvironmentCredential`. Leave blank in ACA (uses Managed Identity). |
 | `AZURE_CLIENT_SECRET` | *(blank)* | **Local Docker only** — service principal secret. Leave blank in ACA. |
-| `UI_BRANDING_PATH` | `<content root>/ui-branding.json` | File path for persisted UI branding settings (colors, logo, app name, voice list). In Docker/ACA, set to `/data/ui-branding.json` (mounted volume). |
+| `UI_BRANDING_PATH` | `<content root>/ui-branding.json` | Local fallback path for persisted UI branding settings when `AZURE_BRANDING_STORAGE_ACCOUNT` is not set. |
 
 ### Frontend environment variables
 
@@ -238,7 +241,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 
 > **Note on `appsettings.json`:** All backend values can also be set under the `App:` section of `backend-csharp/src/PptxNarrator.Api/appsettings.json` (see `appsettings.example.json`). Environment variables always win over `appsettings.json`.
 
-> **Note on UI branding:** App name, logo, colors, and voice restrictions are system-wide settings stored in `ui-branding.json` (configurable via `UI_BRANDING_PATH`). Changes made in the Admin panel apply to all users immediately. In Azure Container Apps, the file is persisted on an Azure File Share mounted at `/data`. In local dev, it's written next to the backend `.csproj`.
+> **Note on UI branding:** App name, logo, colors, and voice restrictions are system-wide settings stored as a JSON blob in Azure Blob Storage (container `branding-data`). In production, the backend managed identity is granted `Storage Blob Data Contributor` on the storage account automatically by Bicep — no storage account keys are used. Changes made in the Admin panel apply to all users immediately. In local dev without `AZURE_BRANDING_STORAGE_ACCOUNT` set, settings fall back to a local `ui-branding.json` file beside the backend binary.
 
 ---
 
@@ -359,8 +362,8 @@ The app runs as two Azure Container Apps (frontend + backend) and uses managed i
 | Log Analytics Workspace | Yes (created by Bicep) | Container Apps logs and diagnostics |
 | Azure Container App (backend) | Yes (created by Bicep) | ASP.NET Core API workload |
 | Azure Container App (frontend) | Yes (created by Bicep) | React + Nginx UI workload |
-| Azure Storage Account + File Share | Yes (created by Bicep) | Persists system-wide UI branding settings across restarts |
-| User-assigned Managed Identities | Yes (created by Bicep) | Backend/frontend identity and ACR pull auth |
+| Azure Storage Account + Blob Container | Yes (created by Bicep) | Persists system-wide UI branding settings — accessed via Managed Identity (`Storage Blob Data Contributor`); **shared keys are disabled** |
+| User-assigned Managed Identities | Yes (created by Bicep) | Backend/frontend identity, ACR pull auth, and Storage Blob RBAC |
 | Azure AI / Cognitive Services resource | Yes | Speech TTS/STT and OpenAI endpoint access |
 | Azure OpenAI deployments | If AI mode enabled | Chat + image generation (for Step 3 AI mode) |
 | Azure Document Intelligence | Optional | Better PPTX text extraction for sparse slides |
@@ -369,10 +372,12 @@ The app runs as two Azure Container Apps (frontend + backend) and uses managed i
 ### Azure roles required
 
 - Deployer identity: Contributor on the target resource group (and permission to push to ACR).
-- Backend managed identity: at minimum Cognitive Services User on your Azure AI/Cognitive Services resource.
-- Backend managed identity: if OpenAI calls return 403 in your tenant, also assign Cognitive Services OpenAI User.
+- Deployer identity: `Microsoft.Authorization/roleAssignments/write` on the resource group (needed for Bicep to assign RBAC roles automatically). This is included in Owner and User Access Administrator roles.
+- Backend managed identity: `Storage Blob Data Contributor` on the branding storage account — **assigned automatically by Bicep at deploy time**.
+- Backend managed identity: `Cognitive Services User` on your Azure AI/Cognitive Services resource — **assigned automatically by `scripts/deploy.ps1` at deploy time**.
+- Backend managed identity: `Cognitive Services OpenAI User` on your Azure AI/Cognitive Services resource — **assigned automatically by `scripts/deploy.ps1` at deploy time**.
 
-Note: AcrPull role assignments for frontend/backend managed identities are created automatically by the Bicep modules.
+Note: `AcrPull` role assignments for frontend/backend managed identities are created automatically by the Bicep modules.
 
 ### 1. One-time setup
 
@@ -404,6 +409,7 @@ Update `infra/parameters.json` for your environment:
 - `azureImageDeployment`
 - `backendExternalIngress` (set `false` to make backend internal-only)
 - `backendCorsAllowedOrigins` (set explicit origins instead of `*`)
+- Optional: `resourceSuffix` (short suffix appended to all resource names, e.g. `"v2"` — useful for blue/green or parallel environments)
 - Optional: `azureDocIntelEndpoint`, `appBannerMessage`
 
 The deployment script injects `containerRegistryName`, `backendImage`, and `frontendImage` automatically.
@@ -428,6 +434,12 @@ Override TTS concurrency for a one-off deployment without editing `infra/paramet
 .\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -TtsMaxParallelism 6
 ```
 
+Deploy with a custom suffix to create a parallel environment:
+
+```powershell
+.\scripts\deploy.ps1 -ResourceGroup <rg-name> -AcrName <acr-name> -ResourceSuffix v2
+```
+
 The script will:
 1. Build and push both images to ACR.
 2. Deploy `infra/main.bicep` with image references.
@@ -436,10 +448,10 @@ The script will:
 
 ### 4. Post-deploy configuration behavior
 
-`scripts/deploy.ps1` now automates the two critical post-deploy steps:
+`scripts/deploy.ps1` now automates the critical post-deploy steps:
 
 1. Sets frontend `BACKEND_URL` to the deployed backend URL.
-2. Attempts to assign `Cognitive Services User` to the backend managed identity.
+2. Assigns `Cognitive Services User` and `Cognitive Services OpenAI User` to the backend managed identity.
 
 If your Azure AI/Cognitive Services account is in a different resource group or has a different name than `infra/parameters.json`, pass these optional parameters:
 
@@ -454,7 +466,7 @@ If your deployer identity cannot create role assignments (`Microsoft.Authorizati
 ```powershell
 $backendPrincipalId = az identity show `
   --resource-group <rg-name> `
-  --name narrator-<environmentName>-backend-id `
+  --name narrator-<environmentName>[-<resourceSuffix>]-backend-id `
   --query principalId -o tsv
 
 az role assignment create `
@@ -462,11 +474,7 @@ az role assignment create `
   --assignee-principal-type ServicePrincipal `
   --role "Cognitive Services User" `
   --scope /subscriptions/<sub-id>/resourceGroups/<ai-rg>/providers/Microsoft.CognitiveServices/accounts/<ai-resource-name>
-```
 
-Optional fallback for stricter OpenAI RBAC:
-
-```powershell
 az role assignment create `
   --assignee-object-id $backendPrincipalId `
   --assignee-principal-type ServicePrincipal `
@@ -477,8 +485,8 @@ az role assignment create `
 ### 5. Validate production deployment
 
 ```powershell
-az containerapp show -g <rg-name> -n narrator-<environmentName>-frontend --query properties.configuration.ingress.fqdn -o tsv
-az containerapp show -g <rg-name> -n narrator-<environmentName>-backend --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show -g <rg-name> -n narrator-<environmentName>[-<resourceSuffix>]-frontend --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show -g <rg-name> -n narrator-<environmentName>[-<resourceSuffix>]-backend --query properties.configuration.ingress.fqdn -o tsv
 ```
 
 Then verify:

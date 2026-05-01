@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "3415563668687485871"
+      "templateHash": "2304596371970729996"
     }
   },
   "parameters": {
@@ -14,6 +14,13 @@
     },
     "environmentName": {
       "type": "string"
+    },
+    "resourceSuffix": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional suffix appended to every resource name (e.g. \"v2\"). Leave blank for no suffix."
+      }
     },
     "containerAppsEnvironmentId": {
       "type": "string"
@@ -71,10 +78,16 @@
       "defaultValue": [
         "*"
       ]
+    },
+    "brandingStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account used for Blob-backed UI branding (Entra RBAC, no shared keys)."
+      }
     }
   },
   "variables": {
-    "prefix": "[format('narrator-{0}', parameters('environmentName'))]",
+    "prefix": "[format('narrator-{0}{1}', parameters('environmentName'), if(empty(parameters('resourceSuffix')), '', format('-{0}', parameters('resourceSuffix'))))]",
     "appName": "[format('{0}-backend', variables('prefix'))]"
   },
   "resources": [
@@ -91,6 +104,20 @@
       "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull')]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('brandingStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('brandingStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'storageblobdatacontributor')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
         "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').principalId]",
         "principalType": "ServicePrincipal"
       },
@@ -207,6 +234,14 @@
                   "value": "[string(parameters('defaultSinglePptxMode'))]"
                 },
                 {
+                  "name": "AZURE_BRANDING_STORAGE_ACCOUNT",
+                  "value": "[parameters('brandingStorageAccountName')]"
+                },
+                {
+                  "name": "AZURE_BRANDING_CONTAINER",
+                  "value": "branding-data"
+                },
+                {
                   "name": "AZURE_CLIENT_ID",
                   "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), '2023-01-31').clientId]"
                 }
@@ -242,6 +277,7 @@
       },
       "dependsOn": [
         "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull'))]",
+        "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('brandingStorageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('brandingStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'storageblobdatacontributor'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName')))]"
       ]
     }

@@ -58,6 +58,18 @@ public class AppOptions
     public string AppBannerMessage { get; set; } = "";
     public string UploadFilesMessage { get; set; } = "Provide a narration script and (optionally) a PowerPoint to narrate.";
 
+    // ── UI Branding Storage ──────────────────────────────────────────────────
+    /// <summary>
+    /// Azure Storage account name for Blob-backed UI branding.
+    /// When set, branding is read/written via Entra RBAC (no shared keys).
+    /// Leave blank for local dev — falls back to file on disk.
+    /// Env: AZURE_BRANDING_STORAGE_ACCOUNT
+    /// </summary>
+    public string BrandingStorageAccountName { get; set; } = "";
+
+    /// <summary>Blob container name for UI branding JSON. Env: AZURE_BRANDING_CONTAINER</summary>
+    public string BrandingStorageContainer { get; set; } = "branding-data";
+
     // ── Application Insights ─────────────────────────────────────────────────
     /// <summary>Optional. Enables Application Insights telemetry. Env: APPLICATIONINSIGHTS_CONNECTION_STRING</summary>
     public string? ApplicationInsightsConnectionString { get; set; }

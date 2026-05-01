@@ -8,6 +8,10 @@
     "environmentName": {
       "value": "prod"
     },
+    "resourceSuffix": {
+      "value": "",
+      "note": "Optional. Keep short (1-8 chars). Recommended patterns: v2, blue, canary."
+    },
     "containerRegistryName": {
       "value": "pptxnarratorcsjqkg"
     },
@@ -30,7 +34,9 @@
       "value": true
     },
     "backendCorsAllowedOrigins": {
-      "value": ["*"]
+      "value": [
+        "*"
+      ]
     },
     "azureSpeechResourceName": {
       "value": "bhs-development-public-foundry-r"

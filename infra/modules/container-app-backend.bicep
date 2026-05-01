@@ -4,6 +4,10 @@
 
 param location string
 param environmentName string
+
+@description('Optional suffix appended to every resource name (e.g. "v2"). Leave blank for no suffix.')
+param resourceSuffix string = ''
+
 param containerAppsEnvironmentId string
 param containerRegistryName string
 param backendImage string
@@ -26,14 +30,21 @@ param azureDocIntelEndpoint string
 param appBannerMessage string
 param defaultSinglePptxMode bool
 param corsAllowedOrigins array = ['*']
-param brandingStorageVolumeName string
 
-var prefix = 'narrator-${environmentName}'
+@description('Name of the storage account used for Blob-backed UI branding (Entra RBAC, no shared keys).')
+param brandingStorageAccountName string
+
+var prefix = 'narrator-${environmentName}${empty(resourceSuffix) ? '' : '-${resourceSuffix}'}'
 var appName = '${prefix}-backend'
 
 // ── Container Registry reference ─────────────────────────────────────────────
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: containerRegistryName
+}
+
+// ── Branding Storage Account reference (for RBAC assignment) ─────────────────
+resource brandingStorage 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: brandingStorageAccountName
 }
 
 // ── Managed Identity (used for DefaultAzureCredential) ───────────────────────
@@ -51,6 +62,22 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
       'Microsoft.Authorization/roleDefinitions',
       '7f951dda-4ed3-4680-a7ca-43fe172d538d'
     ) // AcrPull
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Grant Storage Blob Data Contributor to the managed identity on the branding storage account.
+// This allows Entra-authenticated reads and writes to the branding-data blob container.
+// No storage account keys are used.
+resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(brandingStorage.id, identity.id, 'storageblobdatacontributor')
+  scope: brandingStorage
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+    ) // Storage Blob Data Contributor
     principalId: identity.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -88,13 +115,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       ]
     }
     template: {
-      volumes: [
-        {
-          name: 'branding-vol'
-          storageName: brandingStorageVolumeName
-          storageType: 'AzureFile'
-        }
-      ]
       containers: [
         {
           name: 'backend'
@@ -103,12 +123,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
-          volumeMounts: [
-            {
-              volumeName: 'branding-vol'
-              mountPath: '/data'
-            }
-          ]
           env: [
             { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
@@ -125,7 +139,9 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_DOC_INTEL_ENDPOINT', value: azureDocIntelEndpoint }
             { name: 'APP_BANNER_MESSAGE', value: appBannerMessage }
             { name: 'DEFAULT_SINGLE_PPTX_MODE', value: string(defaultSinglePptxMode) }
-            { name: 'UI_BRANDING_PATH', value: '/data/ui-branding.json' }
+            // Blob Storage for UI branding — Entra auth via managed identity (no keys)
+            { name: 'AZURE_BRANDING_STORAGE_ACCOUNT', value: brandingStorageAccountName }
+            { name: 'AZURE_BRANDING_CONTAINER', value: 'branding-data' }
             // Tell the C# app which managed identity client ID to use
             { name: 'AZURE_CLIENT_ID', value: identity.properties.clientId }
           ]
@@ -154,7 +170,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       }
     }
   }
-  dependsOn: [acrPull]
+  dependsOn: [acrPull, blobDataContributor]
 }
 
 output fqdn string = 'https://${backendApp.properties.configuration.ingress.fqdn}'

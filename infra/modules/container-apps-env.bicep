@@ -1,13 +1,18 @@
 // ────────────────────────────────────────────────────────────────────────────
-// container-apps-env.bicep — Log Analytics + Container Apps Environment + Storage
+// container-apps-env.bicep — Log Analytics + Container Apps Environment +
+//   Blob Storage for UI branding (Entra ID / RBAC — no shared keys)
 // ────────────────────────────────────────────────────────────────────────────
 
 param location string
 param environmentName string
 
-var prefix = 'narrator-${environmentName}'
+@description('Optional suffix appended to every resource name (e.g. "v2"). Leave blank for no suffix.')
+param resourceSuffix string = ''
+
+var prefix = 'narrator-${environmentName}${empty(resourceSuffix) ? '' : '-${resourceSuffix}'}'
 // Storage account names: lowercase alphanumeric only, 3-24 chars
-var storageAccountName = toLower(take(replace('${prefix}stg', '-', ''), 24))
+var storageAccountBase = replace('${prefix}stg', '-', '')
+var storageAccountName = toLower(take('${storageAccountBase}abc', 24))
 
 // ── Log Analytics Workspace ───────────────────────────────────────────────────
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -21,7 +26,7 @@ resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-// ── Storage Account + File Share (persistent UI branding data) ───────────────
+// ── Storage Account (Blob — Entra ID / RBAC only, no shared keys) ─────────────
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -30,19 +35,20 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   properties: {
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
+    allowSharedKeyAccess: false // Entra ID / RBAC only — storage account keys are disabled
   }
 }
 
-resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
+resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
-  parent: fileServices
+resource brandingContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobServices
   name: 'branding-data'
   properties: {
-    shareQuota: 1 // 1 GiB — only a small JSON file
+    publicAccess: 'None'
   }
 }
 
@@ -61,20 +67,6 @@ resource env 'Microsoft.App/managedEnvironments@2023-05-01' = {
   }
 }
 
-// Mount the Azure File Share into the Container Apps Environment
-resource storageMount 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {
-  parent: env
-  name: 'branding-storage'
-  properties: {
-    azureFile: {
-      accountName: storageAccount.name
-      accountKey: storageAccount.listKeys().keys[0].value
-      shareName: fileShare.name
-      accessMode: 'ReadWrite'
-    }
-  }
-}
-
 output environmentId string = env.id
 output environmentName string = env.name
-output storageVolumeName string = storageMount.name
+output storageAccountName string = storageAccount.name

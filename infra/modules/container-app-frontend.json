@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "15745525817455063816"
+      "version": "0.42.1.51946",
+      "templateHash": "11992988367789573625"
     }
   },
   "parameters": {
@@ -14,6 +14,13 @@
     },
     "environmentName": {
       "type": "string"
+    },
+    "resourceSuffix": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional suffix appended to every resource name (e.g. \"v2\"). Leave blank for no suffix."
+      }
     },
     "containerAppsEnvironmentId": {
       "type": "string"
@@ -29,7 +36,7 @@
     }
   },
   "variables": {
-    "prefix": "[format('narrator-{0}', parameters('environmentName'))]",
+    "prefix": "[format('narrator-{0}{1}', parameters('environmentName'), if(empty(parameters('resourceSuffix')), '', format('-{0}', parameters('resourceSuffix'))))]",
     "appName": "[format('{0}-frontend', variables('prefix'))]"
   },
   "resources": [
@@ -42,7 +49,7 @@
     {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('containerRegistryName'))]",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
       "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-id', variables('appName'))), 'acrpull-frontend')]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",

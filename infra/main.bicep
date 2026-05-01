@@ -14,6 +14,10 @@ param location string = resourceGroup().location
 @maxLength(12)
 param environmentName string = 'prod'
 
+@description('Optional suffix appended to every resource name to distinguish parallel deployments (e.g. "v2", "stg"). Leave blank for no suffix.')
+@maxLength(8)
+param resourceSuffix string = ''
+
 @description('Name of the Azure Container Registry that holds the images')
 param containerRegistryName string
 
@@ -76,6 +80,7 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
   params: {
     location: location
     environmentName: environmentName
+    resourceSuffix: resourceSuffix
   }
 }
 
@@ -84,6 +89,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
   params: {
     location: location
     environmentName: environmentName
+    resourceSuffix: resourceSuffix
     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
     containerRegistryName: containerRegistryName
     backendImage: backendImage
@@ -102,7 +108,7 @@ module backendApp 'modules/container-app-backend.bicep' = {
     azureDocIntelEndpoint: azureDocIntelEndpoint
     appBannerMessage: appBannerMessage
     defaultSinglePptxMode: defaultSinglePptxMode
-    brandingStorageVolumeName: containerAppsEnv.outputs.storageVolumeName
+    brandingStorageAccountName: containerAppsEnv.outputs.storageAccountName
   }
 }
 
@@ -111,6 +117,7 @@ module frontendApp 'modules/container-app-frontend.bicep' = {
   params: {
     location: location
     environmentName: environmentName
+    resourceSuffix: resourceSuffix
     containerAppsEnvironmentId: containerAppsEnv.outputs.environmentId
     containerRegistryName: containerRegistryName
     frontendImage: frontendImage
@@ -123,3 +130,4 @@ output backendUrl string = backendApp.outputs.fqdn
 output frontendUrl string = frontendApp.outputs.fqdn
 output backendIdentityPrincipalId string = backendApp.outputs.identityPrincipalId
 output backendIdentityClientId string = backendApp.outputs.identityClientId
+output brandingStorageAccountName string = containerAppsEnv.outputs.storageAccountName
