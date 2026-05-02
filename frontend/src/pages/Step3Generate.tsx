@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import JSZip from 'jszip';
 import type { AppConfig, WizardState } from '../types';
 import { processNarration, streamAiGeneration, streamVideoExport } from '../api/narrationApi';
 import ProgressBar from '../components/ProgressBar';
@@ -25,6 +26,9 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
   const [videoLabel, setVideoLabel] = useState('');
   const [mp4Url, setMp4Url] = useState('');
   const [videoError, setVideoError] = useState('');
+  const [exportingMp3, setExportingMp3] = useState(false);
+  const [mp3Url, setMp3Url] = useState('');
+  const [mp3Error, setMp3Error] = useState('');
   const resultBytesRef = useRef<Uint8Array | null>(null);
   const hasStarted = useRef(false);
 
@@ -111,6 +115,43 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
       setVideoError(e instanceof Error ? e.message : 'Video export failed');
     } finally {
       setExportingVideo(false);
+    }
+  };
+
+  const handleMp3Export = async () => {
+    const bytes = resultBytesRef.current;
+    if (!bytes) return;
+
+    setExportingMp3(true);
+    setMp3Error('');
+
+    try {
+      const pptxZip = await JSZip.loadAsync(bytes);
+      const audioZip = new JSZip();
+      const audioExtensions = ['.mp3', '.m4a', '.wav', '.wma', '.ogg'];
+
+      let fileCount = 0;
+      for (const [path, file] of Object.entries(pptxZip.files)) {
+        if (file.dir) continue;
+        const lower = path.toLowerCase();
+        if (lower.startsWith('ppt/media/') && audioExtensions.some(ext => lower.endsWith(ext))) {
+          const data = await file.async('uint8array');
+          const filename = path.split('/').pop()!;
+          audioZip.file(filename, data);
+          fileCount++;
+        }
+      }
+
+      if (fileCount === 0) {
+        throw new Error('No audio files found in the presentation.');
+      }
+
+      const zipBlob = await audioZip.generateAsync({ type: 'blob' });
+      setMp3Url(URL.createObjectURL(zipBlob));
+    } catch (e: unknown) {
+      setMp3Error(e instanceof Error ? e.message : 'MP3 export failed');
+    } finally {
+      setExportingMp3(false);
     }
   };
 
@@ -247,11 +288,43 @@ export default function Step3Generate({ state, config, onResultReady, onQualityC
               </a>
             )}
 
+            {config.enable_mp3_export && !mp3Url && (
+              <button
+                className="btn btn--secondary"
+                data-testid="btn-export-mp3"
+                onClick={handleMp3Export}
+                disabled={exportingMp3}
+              >
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '5px', verticalAlign: 'text-bottom'}}>
+                  <path d="M8 1a2 2 0 0 1 2 2v5a2 2 0 1 1-4 0V3a2 2 0 0 1 2-2zm4 7a4 4 0 0 1-3.25 3.93V13.5h2v1.5h-5.5v-1.5h2v-1.57A4 4 0 0 1 4 8h1.5a2.5 2.5 0 0 0 5 0H12z"/>
+                </svg>
+                {exportingMp3 ? 'Extracting…' : 'Export MP3s'}
+              </button>
+            )}
+
+            {mp3Url && (
+              <a
+                href={mp3Url}
+                download="narration_audio_files.zip"
+                className="btn btn--secondary"
+                data-testid="download-mp3-link"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}>
+                  <path d="M8 12l-4.5-4.5 1.06-1.06L7 8.88V2h2v6.88l2.44-2.44L12.5 7.5 8 12zM2 14h12v-2H2v2z"/>
+                </svg>
+                Download MP3s
+              </a>
+            )}
+
             <button className="btn btn--ghost" onClick={onRestart}>Start over</button>
           </div>
 
           {videoError && (
             <p className="alert alert--error video-error">{videoError}</p>
+          )}
+
+          {mp3Error && (
+            <p className="alert alert--error video-error">{mp3Error}</p>
           )}
 
           {exportingVideo && (

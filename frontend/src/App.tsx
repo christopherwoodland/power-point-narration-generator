@@ -13,6 +13,7 @@ const DEFAULT_CONFIG: AppConfig = {
   enable_quality_check: true,
   enable_ai_mode: true,
   enable_video_export: true,
+  enable_mp3_export: true,
   default_single_pptx_mode: false,
   banner_message: '',
   upload_files_message:

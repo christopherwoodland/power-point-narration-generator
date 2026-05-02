@@ -9,6 +9,7 @@ builder.Services.Configure<AppOptions>(opts =>
     opts.EnableQualityCheck = builder.Configuration.GetValue("ENABLE_QUALITY_CHECK", true);
     opts.EnableAiMode = builder.Configuration.GetValue("ENABLE_AI_MODE", true);
     opts.EnableVideoExport = builder.Configuration.GetValue("ENABLE_VIDEO_EXPORT", true);
+    opts.EnableMp3Export = builder.Configuration.GetValue("ENABLE_MP3_EXPORT", true);
 
     opts.AzureOpenAiEndpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]
         ?? opts.AzureOpenAiEndpoint;
