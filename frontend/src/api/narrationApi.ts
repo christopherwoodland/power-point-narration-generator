@@ -7,6 +7,7 @@ const CONFIG_FALLBACK: AppConfig = {
   enable_quality_check: true,
   enable_ai_mode: true,
   enable_video_export: true,
+  enable_mp3_export: true,
   default_single_pptx_mode: false,
   banner_message: '',
   tts_mode: 'standard',

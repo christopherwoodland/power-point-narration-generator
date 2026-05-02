@@ -62,6 +62,7 @@ public class NarrationController : ControllerBase
             enable_quality_check = _opts.EnableQualityCheck,
             enable_ai_mode = _opts.EnableAiMode,
             enable_video_export = _opts.EnableVideoExport,
+            enable_mp3_export = _opts.EnableMp3Export,
             banner_message = _opts.AppBannerMessage,
             upload_files_message = _opts.UploadFilesMessage,
             tts_mode = _opts.AzureTtsMode,

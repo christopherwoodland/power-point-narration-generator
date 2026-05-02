@@ -16,6 +16,9 @@ public class AppOptions
     /// <summary>Toggle MP4 video export. Env: ENABLE_VIDEO_EXPORT</summary>
     public bool EnableVideoExport { get; set; } = false;
 
+    /// <summary>Toggle MP3 audio export (zip of embedded audio files). Env: ENABLE_MP3_EXPORT</summary>
+    public bool EnableMp3Export { get; set; } = true;
+
     // ── Azure OpenAI ────────────────────────────────────────────────────────
     public string AzureOpenAiEndpoint { get; set; } =
         "https://bhs-development-public-foundry-r.cognitiveservices.azure.com";

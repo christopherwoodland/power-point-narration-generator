@@ -36,6 +36,7 @@ Upload your script and an existing PowerPoint deck, map slides, and the tool syn
 | Translation | Azure Translator |
 | Quality check | Azure Speech STT round-trip |
 | Video export | FFmpeg + PowerPoint COM (Windows) or LibreOffice (Linux) |
+| Audio export | Client-side ZIP extraction of embedded MP3/audio files (JSZip) |
 | Observability | Structured logging via `ILogger<T>`; optional Application Insights |
 | Containers | Docker + Docker Compose |
 | Dev Container | VS Code Dev Container (Ubuntu 24.04 + .NET 10 + Node 20 + Azure CLI + FFmpeg) |
@@ -204,6 +205,7 @@ Copy `.env.example` to `.env` and fill in your values. The full set of supported
 | `ENABLE_QUALITY_CHECK` | `false` | Toggle Step 4 (STT round-trip quality check). |
 | `ENABLE_AI_MODE` | `false` | Toggle AI slide generation (Step 1 AI mode). Requires Azure OpenAI. |
 | `ENABLE_VIDEO_EXPORT` | `false` | Toggle MP4 export. Requires `ffmpeg` (and PowerPoint COM on Windows / LibreOffice on Linux). |
+| `ENABLE_MP3_EXPORT` | `true` | Toggle MP3 export button. Extracts embedded audio files from the generated PPTX as a ZIP download (client-side, no extra dependencies). |
 | `DEFAULT_SINGLE_PPTX_MODE` | `false` | When `true`, Step 1 defaults to the single-PPTX flow where one PowerPoint is used as both the narration source and the presentation target. |
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated allowed origins for the backend API. Set to your frontend URL in production. |
 | `AZURE_SPEECH_RESOURCE_NAME` | `bhs-development-public-foundry-r` | Cognitive Services / Foundry resource name used for TTS + STT. |
@@ -251,7 +253,7 @@ The 4-step wizard guides you through:
 
 1. **Upload** — provide a Word (`.docx`) or PPTX (`.pptx`) script and a target PowerPoint deck, or enable the single-PPTX flow to use one PowerPoint as both the narration source and the presentation target. Choose a voice, and optionally enable AI mode.
 2. **Map slides** — verify the script-to-slide mapping (reorder if needed).
-3. **Generate** — watch real-time progress as audio is synthesized in bounded parallel per slide and embedded, then download the narrated `.pptx`. Generation only completes successfully when all required slide narrations succeed. Optionally export to `.mp4`.
+3. **Generate** — watch real-time progress as audio is synthesized in bounded parallel per slide and embedded, then download the narrated `.pptx`. Generation only completes successfully when all required slide narrations succeed. Optionally export to `.mp4` or download the embedded audio files as a `.zip` of MP3s.
 4. **Quality check** — optional STT-based pass that estimates comprehension confidence per slide and flags any unclear words.
 
 ---
@@ -343,7 +345,7 @@ The HTML report is written to `frontend/playwright-report/`.
 Covers:
 - Step 1 — file upload, AI mode toggle, voice selector, parse error handling
 - Step 2 — slide mapping table, mismatch banner, navigation
-- Step 3 — generation success/failure, download link, video export button, MP4 download
+- Step 3 — generation success/failure, download link, video export button, MP4 download, MP3 export button
 - Step 4 — quality check upload and results table
 
 ---

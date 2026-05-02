@@ -21,6 +21,7 @@ export interface AppConfig {
   enable_quality_check: boolean;
   enable_ai_mode: boolean;
   enable_video_export: boolean;
+  enable_mp3_export: boolean;
   default_single_pptx_mode: boolean;
   banner_message: string;
   upload_files_message: string;
